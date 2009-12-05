@@ -6,14 +6,23 @@ var fnZero = function() { return 0; }
 // it's great that we're using the deviations and trying every possible combination
 // the next step is to webify it w/ a progress indicator or move it to Python
 
+document.observe('dom:loaded', function() {
+  $('gen1').removeAttribute('disabled');
+	$('gen2').removeAttribute('disabled');
+});
+
 function GenerateRoundRobin(nRounds) {
 	g_aTeams = $("txtTeams").value.split(",").invoke("strip");
 	
 	// hydrate the teams
 	var nTeam = 0;
 	g_aTeams = g_aTeams.map(function(strName) {
-		return { team: strName, nTeam: nTeam++, timesPlayedTeam: new Array(g_aTeams.length).collect(fnZero), nByes: 0 };
+	  var timesPlayedTeam = [];
+	  for (var nTime = 0; nTime < g_aTeams.length; ++nTime)
+	    timesPlayedTeam.push(0);
+		return { team: strName, nTeam: nTeam++, timesPlayedTeam: timesPlayedTeam, nByes: 0 };
 	});
+	
 	// remove Jason's 4, who are no longer
 	//g_aTeams = g_aTeams.without(function(team) { return team.strName == "Jason's 4"; });
 	
@@ -37,14 +46,10 @@ function GenerateRoundRobin(nRounds) {
 		return { site: strName, nSite: nSite++, aTeams: new Array(), nMaxTeams: strName != "Bye" && strName != "Site 4" ? 3 : g_aTeams.length - 9 };
 	});
 	
-	g_aTeams.each(function(team) {
-		team.timesInSite = new Array(g_aSites.length).collect(fnZero);
-	});
-	
 	var astr = [];
 	CreateAllCombos();
-	var nLowestScore = null;
-	var objBestSet;
+	var nLowestScore;
+	var bestSets = [];
 	
 	// 2008, Oct quiz meet (6 rounds)
 	/*ApplySet([[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 3, 6, 1, 4, 7, 2, 5, 8]]);
@@ -62,7 +67,7 @@ function GenerateRoundRobin(nRounds) {
 	*/
 	
 	// 2008 Dec quiz meet (5 rounds)
-	ApplySet([[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 3, 6, 1, 4, 7, 2, 5, 8]]);
+	/*ApplySet([[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 3, 6, 1, 4, 7, 2, 5, 8]]);
 	ApplySet([[0, 4, 8, 1, 5, 6, 2, 3, 7]]);
 	ApplySet([[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 5, 7, 1, 3, 8, 2, 4, 6]]);
 	
@@ -90,39 +95,83 @@ function GenerateRoundRobin(nRounds) {
 	// April
 	ApplySet([[0, 4, 6, 1, 3, 8, 2, 5, 7]]);
 	ApplySet([[0, 5, 8, 1, 4, 7, 2, 3, 6]]);
+	*/
 	
-	var previous_rounds = [Object.toJSON(round1), Object.toJSON(round2), Object.toJSON(round3), Object.toJSON(round4)];
+	/* Randomization test BEFORE
+	ApplySet([[1, 8, 9, 2, 3, 5, 4, 6, 7, 0]]);
+	ApplySet([[0, 7, 9, 1, 5, 6, 3, 4, 8, 2]]);
+	ApplySet([[0, 6, 8, 1, 3, 7, 2, 4, 9, 5]]);
+	ApplySet([[0, 4, 5, 2, 7, 8, 3, 6, 9, 1]]);
+	*/
+  
+  // Randomization test AFTER
+  /*ApplySet([[0, 5, 8, 1, 4, 7, 3, 6, 9, 2]]);
+  ApplySet([[0, 2, 3, 4, 8, 9, 5, 6, 7, 1]]);
+  ApplySet([[0, 4, 6, 1, 3, 8, 2, 7, 9, 5]]);
+  ApplySet([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]]);*/
+  
+	var previous_rounds = [];//Object.toJSON(round1), Object.toJSON(round2), Object.toJSON(round3), Object.toJSON(round4)];
 	// guess I need to code it to avoid duplicates from the same meet
 	
 	var nCombos = g_aCombos.length;
 	// Calculate a Single Round
 	if (nRounds == 1) {
 		for(var Round1 = 0; Round1 < nCombos; ++Round1) {
-			var nScore = ScoreSet([g_aCombos[Round1]]);
+		  var combo = g_aCombos[Round1];
+			var nScore = ScoreSet([combo]);
 			
 			// will no longer do duplicates
-			if ((nLowestScore == null || nScore <= nLowestScore) && !previous_rounds.include(Object.toJSON(g_aCombos[Round1]))) {
+			if ((nLowestScore == null || nScore <= nLowestScore) && !previous_rounds.find(function(prev_round) {
+			    var nTeams = prev_round.length;
+			    for (var nTeam = 0; nTeam < nTeams; ++nTeam)
+			      if (combo[nTeam] != prev_round[nTeam])
+			        return false;
+			    return true;
+			  } )) {
 				nLowestScore = nScore;
-				objBestSet = [g_aCombos[Round1]];
+				if (nScore == nLowestScore)
+				  bestSets.push([combo]);
+				else
+				  bestSets = [[combo]];
 			}
 		}
 	}
 	// Calculate a Double Round
 	else if (nRounds == 2) {
-		for(var Round1 = 0; Round1 < nCombos; ++Round1) {
-			for(var Round2 = 0; Round2 < nCombos; ++Round2) {
-				var nScore = ScoreSet([g_aCombos[Round1], g_aCombos[Round2]]);
-				if (nLowestScore == null || nScore < nLowestScore) {
-					nLowestScore = nScore;
-					objBestSet = [g_aCombos[Round1], g_aCombos[Round2]];
-				}
-			}
-		}
+	  bestSets = iterateRoundOne(bestSets, nLowestScore, nCombos);
 	}
 	
+	var num_sets = bestSets.length;
+	var random_set_num = Math.floor(Math.random() * num_sets);
+	var objBestSet = bestSets[random_set_num];
 	ApplySet(objBestSet);
+	//logDebug('Number of sets: ' + num_sets + ', choosing random set number ' + random_set_num);
 
 	$("tbxSchedule").value = Object.toJSON(objBestSet) + "\n\n" + SetToString(objBestSet) + "\n\n" + CompetitionReport(g_aTeams) + '\n\n' + ByeReport(g_aTeams);
+	$('gen1').disabled = true;
+	$('gen2').disabled = true;
+	alert(getTimes());
+}
+
+function iterateRoundOne(bestSets, nLowestScore, nCombos) {
+	for(var Round1 = 0; Round1 < nCombos; ++Round1) {
+	  logDebug(Round1);
+		for(var Round2 = 0; Round2 < nCombos; ++Round2) {
+		  startTime('innerLoop');
+		  startTime('scoreSet');
+			var nScore = ScoreSet([g_aCombos[Round1], g_aCombos[Round2]]);
+			stopTime('scoreSet');
+			if (nLowestScore == null || nScore < nLowestScore) {
+				nLowestScore = nScore;
+				if (nScore == nLowestScore)
+				  bestSets.push([g_aCombos[Round1], g_aCombos[Round2]]);
+				else
+				  bestSets = [[g_aCombos[Round1], g_aCombos[Round2]]];
+			}
+			stopTime('innerLoop');
+		}
+	}
+	return bestSets;
 }
 
 function ApplySet(aSet) {
@@ -138,60 +187,126 @@ function ApplySet(aSet) {
 	}
 }
 
+// we randomize the position of the triads
+// and the position of each team within each triad
+// at this point because we haven't yet programmed the system
+// to know how to handle nulls earlier (say, only two teams competing in Site 1)
+// currently it only knows how to handle a list w/ 8 teams in it, rather than a
+// list with 9 items and one of them is blank
 function SetToString(aSet) {
 	var nRounds = aSet.length;
 	var astr = [];
 	for(var nRound = 0; nRound < nRounds; ++nRound)
 	{
 		var combo = aSet[nRound];
+		var combo_by_names = combo.map(GetTeamByNum).pluck("team");
+		
+		// create a nested array of sites and teams
+		var sites = [];
+		sites.push(combo_by_names.slice(0, 3));
+		sites.push(combo_by_names.slice(3, 6));
+		sites.push(combo_by_names.slice(6, 9));
+		if (combo_by_names.length > 9)
+		  sites.push(combo_by_names.slice(9, 12));
+		
 		astr.push("Round " + (nRound + 1));
-		astr.push(combo.map(GetTeamByNum).pluck("team").join("\n") + "\n");
+		sites.sort(randomOrder);
+		for (var nSite = 0; nSite < sites.length; ++nSite) {
+		  var site = sites[nSite];
+		  site.sort(randomOrder);
+		  astr.push(site.join("\n") + "\n");
+		}	
 	}
 	return astr.join("\n");
 }
 
 function ScoreSet(aSet) {
 	var nScore = 0;
-	var aTeams = [null, null, null, null, null, null, null, null, null, null, null, null, null];
-	
-	// deep copy all the teams
-	var nTeams = g_aTeams.length;
-	for (var nTeam = 0; nTeam < nTeams; ++nTeam) {
-		var team = g_aTeams[nTeam];
-		aTeams[team.nTeam] = {team: team.team, nTeam: team.nTeam, timesInSite: team.timesInSite.clone(), timesPlayedTeam: team.timesPlayedTeam.clone(), nByes: team.nByes };
-	}
 	
 	// simulate placing 9 teams in 9 sites
+	startTime('simulate');
 	var nRounds = aSet.length;
 	for(var nRound = 0; nRound < nRounds; ++nRound) {
 		var combo = aSet[nRound];
-		IncrementTimesPlayed3(aTeams[combo[0]], aTeams[combo[1]], aTeams[combo[2]]);
-		IncrementTimesPlayed3(aTeams[combo[3]], aTeams[combo[4]], aTeams[combo[5]]);
-		IncrementTimesPlayed3(aTeams[combo[6]], aTeams[combo[7]], aTeams[combo[8]]);
+		IncrementTimesPlayed3(g_aTeams[combo[0]], g_aTeams[combo[1]], g_aTeams[combo[2]]);
+		IncrementTimesPlayed3(g_aTeams[combo[3]], g_aTeams[combo[4]], g_aTeams[combo[5]]);
+		IncrementTimesPlayed3(g_aTeams[combo[6]], g_aTeams[combo[7]], g_aTeams[combo[8]]);
 		
 		if (combo.length == 10)
-			aTeams[combo[9]].nByes += 1;
+			g_aTeams[combo[9]].nByes += 1;
 	}
+	stopTime('simulate');
 	
 	// add up the score
+	startTime('addupscore');
+	var nTeams = g_aTeams.length;
 	for (var nTeam = 0; nTeam < nTeams; ++nTeam) {
 		var team;
-		if (team = aTeams[nTeam]) {
+		if (team = g_aTeams[nTeam]) {
 			if (team.nByes >= 2) nScore += 10000; // severely penalize any combo that gives a single team multiple byes
 			nScore += TeamScore(team);
 		}
 	}
+	stopTime('addupscore');
+	
+	// simulate placing 9 teams in 9 sites
+	startTime('decrement');
+	var nRounds = aSet.length;
+	for(var nRound = 0; nRound < nRounds; ++nRound) {
+		var combo = aSet[nRound];
+		DecrementTimesPlayed3(g_aTeams[combo[0]], g_aTeams[combo[1]], g_aTeams[combo[2]]);
+		DecrementTimesPlayed3(g_aTeams[combo[3]], g_aTeams[combo[4]], g_aTeams[combo[5]]);
+		DecrementTimesPlayed3(g_aTeams[combo[6]], g_aTeams[combo[7]], g_aTeams[combo[8]]);
+		
+		if (combo.length == 10)
+			g_aTeams[combo[9]].nByes -= 1;
+	}
+	stopTime('decrement');
+	
 	return nScore;
+}
+
+// Third version (sum of deviations from the mean)
+function TeamScore(team) {
+	var nSum = 0;
+	var nDeviations = 0;
+	var nTeams = team.timesPlayedTeam.length;
+	for(var nTeam = 0; nTeam < nTeams; ++nTeam)
+		nSum += team.timesPlayedTeam[nTeam];
+	var nMean = nSum / nTeams;
+	for(var nTeam = 0; nTeam < nTeams; ++nTeam)
+		nDeviations += Math.abs(nMean - team.timesPlayedTeam[nTeam])
+	return nDeviations;
 }
 
 function IncrementTimesPlayed3(team1, team2, team3)
 {
-	team1.timesInSite[0]++;
-	team2.timesInSite[1]++;
-	team3.timesInSite[2]++;
-	IncrementTimesPlayed(team1, team2);
-	IncrementTimesPlayed(team2, team3);
-	IncrementTimesPlayed(team1, team3);
+	//IncrementTimesPlayed(team1, team2);
+	++team2.timesPlayedTeam[team1.nTeam];
+	++team1.timesPlayedTeam[team2.nTeam];
+	
+	//IncrementTimesPlayed(team2, team3);
+	++team3.timesPlayedTeam[team2.nTeam];
+	++team2.timesPlayedTeam[team3.nTeam];
+	
+	//IncrementTimesPlayed(team1, team3);
+	++team3.timesPlayedTeam[team1.nTeam];
+	++team1.timesPlayedTeam[team3.nTeam];
+}
+
+function DecrementTimesPlayed3(team1, team2, team3)
+{
+	//IncrementTimesPlayed(team1, team2);
+	--team2.timesPlayedTeam[team1.nTeam];
+	--team1.timesPlayedTeam[team2.nTeam];
+	
+	//IncrementTimesPlayed(team2, team3);
+	--team3.timesPlayedTeam[team2.nTeam];
+	--team2.timesPlayedTeam[team3.nTeam];
+	
+	//IncrementTimesPlayed(team1, team3);
+	--team3.timesPlayedTeam[team1.nTeam];
+	--team1.timesPlayedTeam[team3.nTeam];
 }
 
 function CreateAllCombos() {
@@ -203,6 +318,7 @@ function AddToCombo(aTeamsUsed, aTeamsLeft) {
 		// we're at the tail, pop 'em onto the global
 		g_aCombos.push(aTeamsUsed);
 	} else {
+	  // loop through aTeamsLeft until we find one that works
 		var nTeams = aTeamsLeft.length;
 		for(var nTeam = 0; nTeam < nTeams; ++nTeam) {
 			var team = aTeamsLeft[nTeam];
@@ -211,6 +327,8 @@ function AddToCombo(aTeamsUsed, aTeamsLeft) {
 			if ((aTeamsUsed.length % 3 == 0) || (team > aTeamsUsed[aTeamsUsed.length - 1]))
 			{
 				// force ascending order between triads to eliminate duplicate triads
+				// CAREFUL: only force ascending order between sites if the last site is full
+				// && (aTeamsUsed.length != 9 || team > aTeamsUsed[6])
 				if ((aTeamsUsed.length != 3 || team > aTeamsUsed[0]) && (aTeamsUsed.length != 6 || team > aTeamsUsed[3]))
 				{
 					// clone and push this team on
@@ -230,30 +348,6 @@ function AddToCombo(aTeamsUsed, aTeamsLeft) {
 }
 
 
-// increment times played, based on previous meet pairings
-function LoadMeetPairings(aMeetPairings) {
-	aMeetPairings.each(function(match) {
-		// get actual team object (not just strings)
-		aobjTeams = match.map(function(strName) {
-			var objTeam = GetTeam(strName);
-			if (!objTeam) alert("Team not found: '" + strName + "'!");
-			return objTeam;
-			});
-		if (aobjTeams.length > 1) {
-			// there are multiple teams, so increment the # of times they've played each other
-			aobjTeams.each(function (team) {
-				aobjTeams.each(function (otherTeam) {
-					if (team != otherTeam)
-						IncrementTimesPlayed(team, otherTeam);
-				});
-			});
-		} else {
-			// there's just one team, so it's a Bye, increment its time in the last site
-			aobjTeams[0].timesInSite[3]++;
-		}
-	});
-}
-
 function GetTeam(strName) {
 	return g_aTeams.find(function(team) { return team.team == strName; });
 }
@@ -261,24 +355,6 @@ function GetTeamByNum(nTeam) {
 	var team = g_aTeams.find(function(team) { return team.nTeam == nTeam; });
 	if (!team) throw new Error("Team not found: " + nTeam);
 	return team;
-}
-
-function IncrementTimesPlayed(team, otherTeam) {
-	otherTeam.timesPlayedTeam[team.nTeam]++;
-	team.timesPlayedTeam[otherTeam.nTeam]++;
-}
-
-// Third version (sum of deviations from the mean)
-function TeamScore(team) {
-	var nSum = 0;
-	var nDeviations = 0;
-	var nTeams = team.timesPlayedTeam.length;
-	for(var nTeam = 0; nTeam < nTeams; ++nTeam)
-		nSum += team.timesPlayedTeam[nTeam];
-	var nMean = nSum / nTeams;
-	for(var nTeam = 0; nTeam < nTeams; ++nTeam)
-		nDeviations += Math.abs(nMean - team.timesPlayedTeam[nTeam])
-	return nDeviations;
 }
 
 function CompetitionReport(teams) {
@@ -295,4 +371,75 @@ function ByeReport(teams) {
 		result += team.team + ': ' + team.nByes + '\n';
 	});
 	return result;
+}
+
+// logging "debug" messages (interesting only to the programmer)
+function logDebug(str) {
+  if (console && console.log)
+    console.log(str);
+}
+
+// emulates all of Python's List slice functionality (with the "list[]" notation)
+// http://docs.python.org/library/stdtypes.html#sequence-types-str-unicode-list-tuple-buffer-xrange
+Array.prototype.slice = function(start, stop, step) {
+  var len = this.length;
+  if (isOmitted(step)) step = 1;
+
+  // if start or stop are omitted, they become "end" values
+  if (isOmitted(start))
+    start = step > 0 ? 0 : len;
+  if (isOmitted(stop))
+    stop = step > 0 ? len : 0;
+
+  // if start or stop are greater than the length, use the length
+  if (start > len) start = len;
+  if (stop > len) stop = len;
+
+  // if start or stop are negative, they are relative to the length
+  if (start < 0) start = len + start;
+  if (stop < 0) stop = len + stop;
+
+  var result = [];
+  for (var index = start; index < stop; index = index + step)
+    result.push(this[index]);
+
+  return result;
+}
+
+function randomOrder() {
+  return (Math.round(Math.random())-0.5);
+}
+
+function isOmitted(val) {
+  return typeof val === "undefined" || val === null;
+}
+
+
+var timers = {};
+function startTime(strTimer)
+{
+	var timer = (strTimer in timers) ? timers[strTimer] : timers[strTimer] = { total: 0, countStart: 0, countStop: 0 };
+	if (!timer.startTime)
+		timer.startTime = [new Date()];
+	else
+		timer.startTime.push(new Date());
+	++timer.countStart;
+}
+function stopTime(strTimer)
+{
+	var timer = timers[strTimer];
+	// IEONLY: Not sure if other browsers implement array.pop()
+	timer.total += new Date() - timer.startTime.pop();
+	++timer.countStop;
+}
+function getTimes()
+{
+	var astrTimes = [];
+	for (key in timers) {
+		var timer = timers[key];
+		if (timer.countStart != timer.countStop) alert("start/stop times don't match: " + key);
+		astrTimes.push(timer.total + "ms - " + key + " (" + timer.countStart + ")");
+	}
+	timers = {};
+	return astrTimes.join("\n");
 }

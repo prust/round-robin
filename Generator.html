@@ -1,11 +1,14 @@
 <html>
 	<head><title>BQ Round Robin Generator</title>
-		<script src="prototype-1.5.1.js"></script>
+		<script src="prototype.js"></script>
 		<script src="RoundRobinGenerator3.js"></script>
 	</head>
 	<body>
-		<!-- PRE-SEASON input type="text" id="txtTeams" style="width: 600px" value="Poiema, Conquizzadors, Jason's 4, Tital, Skittles, Help Wanted, Seven Brothers, Twelve - Five, The Flock, More Than Conquerors" /><input type="button" onclick="GenerateRoundRobin(1);" value="Generate 1 Round" /><input type="button" onclick="GenerateRoundRobin(2);" value="Generate 2 Rounds" / -->
-		<input type="text" id="txtTeams" style="width: 600px" value="Poiema, Conquizzadors, Tital, Skittles, Help Wanted, Seven Brothers, Disciples, The Flock, More Than Conquerors" /><input type="button" onclick="GenerateRoundRobin(1);" value="Generate 1 Round" /><input type="button" onclick="GenerateRoundRobin(2);" value="Generate 2 Rounds" />
+		<!-- PRE-SEASON input type="text" id="txtTeams" style="width: 600px" value="Poiema, Conquizzadors, Jason's 4, Tital, Skittles, Help Wanted, Seven Brothers, Twelve - Five, The Flock, More Than Conquerors" /-->
+		<!-- LAST SEASON input type="text" id="txtTeams" style="width: 600px" value="Poiema, Conquizzadors, Tital, Skittles, Help Wanted, Seven Brothers, Disciples, The Flock, More Than Conquerors" /><input type="button" onclick="GenerateRoundRobin(1);" value="Generate 1 Round" /-->
+		<input type="text" id="txtTeams" style="width: 600px" value="GPS, Jelly Fish, Super Apostles, Qualified, SCYM, Fools for Christ, Going Places, On Strike, SoundsofSilence, The FB" /><!--  -->
+		<input id="gen1" type="button" onclick="GenerateRoundRobin(1);" value="Generate 1 Round" />
+		<input id="gen2" type="button" onclick="GenerateRoundRobin(2);" value="Generate 2 Rounds" />
 		<textarea id="tbxSchedule" rows="50" cols="150"></textarea>
 	</body>
 </html>
