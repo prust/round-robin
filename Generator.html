@@ -10,6 +10,8 @@
 		<input id="gen1" type="button" onclick="GenerateRoundRobin(1);" value="Generate 1 Round" />
 		<input id="gen2" type="button" onclick="GenerateRoundRobin(2);" value="Generate 2 Rounds" />
 		<input id="test1" type="button" onclick="GlobalSetup(); $('tbxSchedule').innerHTML = Object.toJSON(g_aCombos);" value="Show Combinations" />
+		<input type="button" onclick="alert(getTimes());" value="Get Times" /><br />
+		<span id="progress">&nbsp;</span> <input type="button" onclick="g_cancel = true; alert('Calculation Cancelled.');" value="Cancel" /><br />
 		<textarea id="tbxSchedule" rows="50" cols="150"></textarea>
 	</body>
 </html>

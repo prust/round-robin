@@ -1,7 +1,10 @@
-﻿var g_aTeams, g_aSites, g_nTeams;
+﻿var g_aTeams, g_aSites, g_nSites, g_nTeams;
 var g_aCombos = [];
+var g_num_combos = 0;
+var g_current_combo_num = 0;
 var g_aSets = [];
 var fnZero = function() { return 0; }
+var g_stop_time, g_cancel;
 
 // it's great that we're using the deviations and trying every possible combination
 // the next step is to webify it w/ a progress indicator or move it to Python
@@ -42,6 +45,8 @@ function GlobalSetup() {
   	if (g_aTeams.length == 12)
   		g_aSites = ["Site 1", "Site 2", "Site 3", "Site 4"];
   	
+  	g_nSites = g_aSites.length;
+  	
   	// hydrate the sites
   	var nSite = 0;
   	g_aSites = g_aSites.map(function(strName) {
@@ -56,25 +61,71 @@ var g_best_sets = [];
 var g_lowest_score = -1;
 var g_num_rounds = -1;
 
+function round(num) {
+  var num_parts = num.toString().split('.');
+  if (num_parts.length == 2) {
+    var fraction = num_parts[1];
+    num_parts[1] = fraction.substr(0, fraction.length < 3 ? fraction.length : 3);
+    return num_parts.join('.');
+  }
+  else {
+    return num_parts[0];
+  }
+}
+
+function pushTimerBack() {
+  if (!g_num_combos)
+    $('progress').innerHTML = '0%';
+  else
+    $('progress').innerHTML = round(g_current_combo_num / g_num_combos) + '%';
+  g_stop_time.setSeconds(g_stop_time.getSeconds() + 10);
+  setTimeout(pushTimerBack, 10 * 1000);
+}
+
 function GenerateRoundRobin(nRounds) {
-  GlobalSetup();
-  ApplySetNew([[1, 8, 9], [2, 6, 7], [3, 4, 5], [0]]);
-  g_num_rounds = nRounds;
-  trySiteCombos(g_aCombos, 0, []);
-  var objBestSet = chooseRandomItem(g_best_sets);
+  // 10 seconds (1000ms in a sec)
+  g_stop_time = new Date();
   
-  ApplySetNew(objBestSet);
-	$("tbxSchedule").value = Object.toJSON(objBestSet) + "\n\n" + SetToString(objBestSet) + "\n\n" + CompetitionReport(g_aTeams) + '\n\n' + ByeReport(g_aTeams);
-	$('gen1').disabled = true;
+  GlobalSetup();
+  
+  // December
+  ApplySetNew([[0, 3, 6], [1, 4, 7], [5, 8, 9], [2], [0, 1, 2], [3, 4, 5], [6, 7, 8], [9]]);
+  ApplySetNew([[0, 5, 7], [2, 3, 8], [4, 6, 9], [1]]);
+  ApplySetNew([[1, 4, 8], [2, 5, 6], [3, 7, 9], [0], [0, 8, 9], [1, 5, 6], [2, 4, 7], [3]]);
+  
+  $("tbxSchedule").value = SetToString([[0, 3, 6], [1, 4, 7], [5, 8, 9], [2]]) + "\n\n"
+  
+  /*g_num_rounds = nRounds;
+  g_lastRoundSite = g_nSites * (g_num_rounds - 1);
+  trySiteCombos(g_aCombos, 0, []);
+  $('gen1').disabled = true;
 	$('gen2').disabled = true;
-	alert(getTimes());
+  
+  var objBestSet = chooseRandomItem(g_best_sets);
+  ApplySetNew(objBestSet);
+	$("tbxSchedule").value = Object.toJSON(objBestSet) + "\n\n" + SetToString(objBestSet) + "\n\n"
+	$("tbxSchedule").value += CompetitionReport(g_aTeams) + '\n\n' + ByeReport(g_aTeams);*/
 }
 
 function trySiteCombos(combos, nCumulativeScore, prev_sites) {
+  // leapfrog ahead by pushing the other stop_time 10 sec beyond this one
+  /*if (g_cancel)
+    return;
+  if (new Date() > g_stop_time) {
+    // wait half a second for the UI to update
+    setTimeout(trySiteCombos.curry(combos, nCumulativeScore, prev_sites), 500);
+    return;
+  }*/
+  
+  // all the sites we've done so far, including this one
+  var nSitesDone = prev_sites.length + 1;
+  var last_round = nSitesDone > g_lastRoundSite;
+  var prep_for_last_round = nSitesDone == g_lastRoundSite;
+    
   var nCombos = combos.length;
   for (var nCombo = 0; nCombo < nCombos; ++nCombo) {
     var combo = combos[nCombo];
-   
+    var new_score = nCumulativeScore;
     // setup teams
     startTime('setup teams');
     var nTeams = combo.length;
@@ -88,79 +139,123 @@ function trySiteCombos(combos, nCumulativeScore, prev_sites) {
     var team3_nTeam = team3 ? team3.nTeam : -1;
     stopTime('setup teams');
     
-    // increment everything
-    startTime('increment');
-    if (team2) {
-      ++team1.timesPlayedTeam[team2_nTeam];
-      ++team2.timesPlayedTeam[team1_nTeam];
-  	  if (team3) {
-  	    ++team1.timesPlayedTeam[team3_nTeam];
-  	    ++team2.timesPlayedTeam[team3_nTeam];
-  	    ++team3.timesPlayedTeam[team1_nTeam];
-  	    ++team3.timesPlayedTeam[team2_nTeam];
-  	  }
-  	}
-  	else {
-  	  ++team1.nByes;
-  	}
-  	stopTime('increment');
+    if (!last_round) {
+      startTime('increment');
+      // increment everything
+      if (team2) {
+        ++team1.timesPlayedTeam[team2_nTeam];
+        ++team2.timesPlayedTeam[team1_nTeam];
+    	  if (team3) {
+    	    ++team1.timesPlayedTeam[team3_nTeam];
+    	    ++team2.timesPlayedTeam[team3_nTeam];
+    	    ++team3.timesPlayedTeam[team1_nTeam];
+    	    ++team3.timesPlayedTeam[team2_nTeam];
+    	  }
+    	}
+    	else {
+    	  ++team1.nByes;
+    	}
+    	stopTime('increment');
     
-    // calculate score
-    startTime('calc score');
-    var new_score = nCumulativeScore + TeamScore(team1);
-    if (team2) {
-      new_score += TeamScore(team2);
-      if (team3)
-        new_score += TeamScore(team3);
+      // calculate score of each team
+      if (prep_for_last_round) {
+        ++g_current_combo_num;
+        startTime('calc score all');
+        for (var nTeam = 0; nTeam < g_nTeams; ++nTeam) {
+          new_score += TeamScore5(g_aTeams[nTeam]);
+        }
+        stopTime('calc score all');
+      }
     }
-    stopTime('calc score');
     
-    // keep going if there are nested combinations
+    if (last_round) {
+      if (team2) {
+        new_score += (TeamScoreDiff(team1.timesPlayedTeam[team2_nTeam]) * 2);
+    	  if (team3) {
+    	    new_score += (TeamScoreDiff(team1.timesPlayedTeam[team3_nTeam]) * 2);
+    	    new_score += (TeamScoreDiff(team2.timesPlayedTeam[team3_nTeam]) * 2);
+    	  }
+    	}
+    	else {
+    	  // penalize teams with more than 1 bye
+    	  if (team1.nByes) {
+    	    new_score += 10000;
+    	  }
+    	}
+    }
+
+    // recurse if there are nested combinations
     var nested_combo = combo.length >= 4 ? combo[3] : null;
     if (nested_combo && nested_combo.length) {
-      if (g_lowest_score == -1 || g_lowest_score >= new_score) {
-        startTime('prep nested');
+      // every single [..., [0, 5, 7] is too high to recurse, why are their scores in the 400s?
+      //if (g_lowest_score != -1 && prev_sites.length == 6 && prev_sites[0][2] == 7 && prev_sites[0][1] == 5 && prev_sites[0][0] == 0)
+      //  logDebug('[0, 5, 7] - ' + new_score + ', g_lowest_score: ' + g_lowest_score + ', ' + prev_sites);
+      if (g_lowest_score == -1 || new_score <= g_lowest_score) {
+        // could streamline by doing "new_prev_sites.push(combo);"
+        startTime('prep nested - could streamline');
         var new_prev_sites = [].concat(prev_sites);
 				new_prev_sites.push([combo[0], combo[1], combo[2]]);
-				stopTime('prep nested');
+				stopTime('prep nested - could streamline');
         trySiteCombos(nested_combo, new_score, new_prev_sites);
       }
     }
     
-    // TODO: if we're at a leaf-node, possibly add to list of best scores
-    if (prev_sites.length + 1 == g_aSites.length * g_num_rounds) {
+    // if we just finished a round, start over w/ g_aCombos for the next
+    if (!last_round && nSitesDone % g_nSites == 0) {
+      startTime('starting over');
+      if (prev_sites[2] == 7 && prev_sites[1] == 5 && prev_sites[0] == 0)
+        logDebug('[0, 5, 7] - ' + new_score);
+      var new_prev_sites = [].concat(prev_sites);
+			new_prev_sites.push(combo.slice(0, 3));
+			stopTime('starting over');
+			trySiteCombos(g_aCombos, new_score, new_prev_sites);
+    }
+    
+    // if we're at a leaf-node, possibly add to list of best scores
+    if (last_round && (nSitesDone == g_nSites * g_num_rounds)) {
+      startTime('leaf-node / scoring');
       if (g_lowest_score == -1 || new_score <= g_lowest_score) {
         var set = [].concat(prev_sites);
-        set.push(combo);
+        set.push(combo.slice(0, 3));
         if (new_score == g_lowest_score) {
           g_best_sets.push(set);
         }
         else if (g_lowest_score == -1 || new_score < g_lowest_score) {
           g_best_sets = [set];
-          logDebug('a new low score (' + new_score + ', prev lowest: ' + g_lowest_score + '): ' + Object.toJSON(set));
           g_lowest_score = new_score;
+          logDebug('new low score: ' + new_score + ', ' + set);
         }
       }
+      stopTime('leaf-node / scoring');
     }
     
     // decrement everything 
-    startTime('decrement');
-    if (team2) {
-      --team1.timesPlayedTeam[team2_nTeam];
-      --team2.timesPlayedTeam[team1_nTeam];
-      if (team3) {
-  	    --team1.timesPlayedTeam[team3_nTeam];
-  	    --team2.timesPlayedTeam[team3_nTeam];
-  	    --team3.timesPlayedTeam[team1_nTeam];
-  	    --team3.timesPlayedTeam[team2_nTeam];
-  	  }
-  	}
-  	else {
-  	  --team1.nByes;
-  	}
-  	stopTime('decrement');
+    if (!last_round) {
+      startTime('decrement');
+      if (team2) {
+        --team1.timesPlayedTeam[team2_nTeam];
+        --team2.timesPlayedTeam[team1_nTeam];
+        if (team3) {
+    	    --team1.timesPlayedTeam[team3_nTeam];
+    	    --team2.timesPlayedTeam[team3_nTeam];
+    	    --team3.timesPlayedTeam[team1_nTeam];
+    	    --team3.timesPlayedTeam[team2_nTeam];
+    	  }
+    	}
+    	else {
+    	  --team1.nByes;
+    	}
+  	  stopTime('decrement');
+    }
   }
 }
+
+function Assert(boolean, msg) {
+  if (boolean)
+    throw new Error(msg);
+}
+
+function teamWithMultipleByes(team) { return team.nByes > 1; }
 
 function GenerateRoundRobin_OLD(nRounds) {
 	GlobalSetup();
@@ -266,7 +361,6 @@ function GenerateRoundRobin_OLD(nRounds) {
 	$("tbxSchedule").value = Object.toJSON(objBestSet) + "\n\n" + SetToString_OLD(objBestSet) + "\n\n" + CompetitionReport(g_aTeams) + '\n\n' + ByeReport(g_aTeams);
 	$('gen1').disabled = true;
 	$('gen2').disabled = true;
-	alert(getTimes());
 }
 
 function chooseRandomItem(array) {
@@ -356,7 +450,7 @@ function SetToString_OLD(aSet) {
 	for(var nRound = 0; nRound < nRounds; ++nRound)
 	{
 		var combo = aSet[nRound];
-		var combo_by_names = combo.map(GetTeamByNum).pluck("team");
+		var combo_by_names = combo.slice(0, 3).map(GetTeamByNum).pluck("team");
 		
 		// create a nested array of sites and teams
 		var sites = [];
@@ -383,7 +477,7 @@ function SetToString(set) {
 	var nSites = set.length;
 	for (var nSite = 0; nSite < nSites; ++nSite) {
 		var combo = set[nSite];
-		var combo_by_names = combo.map(GetTeamByNum).pluck("team");
+		var combo_by_names = combo.slice(0, 3).map(GetTeamByNum).pluck("team");
 		astr.push(combo_by_names.join("\n") + "\n");
 	}
 	return astr.join("\n");
@@ -447,6 +541,44 @@ function TeamScore(team) {
 	  nDeviations += 10000; // severely penalize any combo that gives a single team multiple byes
 
 	return nDeviations;
+}
+
+// fourth version based on standard deviation code from:
+// http://www.cs.miami.edu/~burt/learning/Math119/js-ComputeStdDev.html
+function TeamScore_NEW(team) {
+	var nSum = 0;
+	var nDeviations = 0;
+	var sqrTotal = 0;
+	var timesPlayedTeam = team.timesPlayedTeam;
+	for(var nTeam = 0; nTeam < g_nTeams; ++nTeam) {
+    var newNumber = timesPlayedTeam[nTeam];
+    nSum += newNumber;
+    sqrTotal += (newNumber * newNumber);
+	}
+  if (team.nByes >= 2)
+	  nDeviations += 10000; // severely penalize any combo that gives a single team multiple byes
+  variance = (sqrTotal - ((nSum * nSum)/g_nTeams))/g_nTeams;
+  return Math.sqrt(variance)
+}
+
+// 5th version based on just squaring the # of times played
+function TeamScore5(team) {
+	var sqrTotal = 0;
+	var timesPlayedTeam = team.timesPlayedTeam;
+	for(var nTeam = 0; nTeam < g_nTeams; ++nTeam) {
+    var newNumber = timesPlayedTeam[nTeam];
+    sqrTotal += newNumber * newNumber;
+	}
+  if (team.nByes > 1)
+	  sqrTotal += (10000 * (team.nByes - 1)); // severely penalize any combo that gives a single team multiple byes
+  return sqrTotal;
+}
+
+// augment the 5th version by providing the diff
+// between the current # of times played and the next one
+function TeamScoreDiff(nTimesPlayed) {
+  var newTimesPlayed = nTimesPlayed + 1;
+  return (newTimesPlayed * newTimesPlayed) - (nTimesPlayed * nTimesPlayed);
 }
 
 function IncrementTimesPlayed3(team1, team2, team3)
@@ -521,8 +653,12 @@ function AddToCombo(aTeamsUsed, aTeamsLeft, combos) {
 				if (this_entry)
 				  combos.push(this_entry);
 				
-				if (newTeamsLeft.length);
+				// if there are teams left, keep recursing
+				if (newTeamsLeft.length)
 				  AddToCombo(newTeamsUsed, newTeamsLeft, nested_site || combos);
+				// otherwise, increment the # of combos (b/c this is a leaf)
+				else
+				  ++g_num_combos;
 			}
 		}
 	}
