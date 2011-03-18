@@ -12,16 +12,7 @@ onmessage = function(event) {
   postMessage({ g_best_sets: g_best_sets });
 }
 
-function trySiteCombos(combos, nCumulativeScore, prev_sites) {
-  // leapfrog ahead by pushing the other stop_time 10 sec beyond this one
-  /*if (g_cancel)
-    return;
-  if (new Date() > g_stop_time) {
-    // wait half a second for the UI to update
-    setTimeout(trySiteCombos.curry(combos, nCumulativeScore, prev_sites), 500);
-    return;
-  }*/
-  
+function trySiteCombos(combos, nCumulativeScore, prev_sites) {  
   // all the sites we've done so far, including this one
   var nSitesDone = prev_sites.length + 1;
   var last_round = nSitesDone > g_lastRoundSite;
@@ -212,7 +203,6 @@ function startTime(strTimer)
 function stopTime(strTimer)
 {
 	var timer = timers[strTimer];
-	// IEONLY: Not sure if other browsers implement array.pop()
 	timer.total += new Date() - timer.startTime.pop();
 	++timer.countStop;
 }

@@ -8,7 +8,6 @@ var g_aSets = [];
 var g_two_team_site;
 var fnZero = function() { return 0; }
 var g_stop_time, g_cancel;
-//function $(id) { return document.getElementById(id); }
 if (!window.Worker)
   alert('This page will not work in your web browser because it does not support Web Workers. Try Firefox 3.5+ or Chrome.');
 
@@ -20,55 +19,12 @@ $j(document).ready(function() {
   });
 });
 
-// TODO: we *really* just need to include prototype... why aren't we?
-// I think it's b/c of the web workers not allowing window/DOM stuff
-
-// not recursive, not well written, etc, etc
-/*Array.prototype.flatten = function() {
-  var len = this.length;
-  var results = [];
-  for (var n = 0; n < len; ++n) {
-    var item = this[n];
-    // if isArray
-    if (item.splice && item.slice) {
-      results = results.concat(item);
-    }
-    else {
-      results.push(item);
-    }
-  }
-  return results;
-}
-
-Array.prototype.invoke = function(method_name) {
-  var len = this.length;
-  var results = [];
-  for (var n = 0; n < len; ++n) {
-    results.push(this[n][method_name]());
-  }
-  return results;
-}
-Array.prototype.pluck = function(prop_name) {
-  var len = this.length;
-  var results = [];
-  for (var n = 0; n < len; ++n) {
-    results.push(this[n][prop_name]);
-  }
-  return results;
-}
-String.prototype.strip = function() {
-  return this.replace(/^\s+/, '').replace(/\s+$/, '');
-}*/
-
-// it's great that we're using the deviations and trying every possible combination
-// the next step is to webify it w/ a progress indicator or move it to Python
-
 function GlobalSetup(team_names, team_index_to_remove) {
 	g_nTeams = team_names.length;
 	
 	// hydrate the teams
 	var nTeam = 0;
-	g_aTeams = team_names.map(function(strName) {
+	g_aTeams = _(team_names).map(function(strName) {
 	  var timesPlayedTeam = [];
 	  for (var nTime = 0; nTime < team_names.length; ++nTime)
 	    timesPlayedTeam.push(0);
@@ -109,11 +65,11 @@ function GlobalSetup(team_names, team_index_to_remove) {
 	
 	// hydrate the sites
 	var nSite = 0;
-	g_aSites = g_aSites.map(function(strName) {
+	g_aSites = _(g_aSites).map(function(strName) {
 		return { site: strName, nSite: nSite++, aTeams: new Array(), nMaxTeams: strName != "Bye" && strName != "Site 4" ? 3 : g_aTeams.length - 9 };
 	});
 	
-	var team_numbers = g_aTeams.pluck("nTeam");
+	var team_numbers = _(g_aTeams).pluck("nTeam");
 	if (team_index_to_remove != null)
 	  team_numbers.splice(team_index_to_remove, 1);
 	CreateAllCombos(team_numbers);
@@ -146,114 +102,11 @@ function GenerateRoundRobin() {
   var nRounds = parseInt($j('#rounds option:selected').val(), 10);
   // 10 seconds (1000ms in a sec)
   g_stop_time = new Date();
-  var team_names = $j('#teams').val().split(",").invoke("strip");
+  var team_names = _($j('#teams').val().split(",")).map($j.trim);
   GlobalSetup(team_names);
   
-	/*
-	2010 Season
-  // December
-  ApplySetNew([[0, 3, 6], [1, 4, 7], [5, 8, 9], [2], [0, 1, 2], [3, 4, 5], [6, 7, 8], [9]]);
-  ApplySetNew([[0, 5, 7], [2, 3, 8], [4, 6, 9], [1]]);
-  ApplySetNew([[1, 4, 8], [2, 5, 6], [3, 7, 9], [0], [0, 8, 9], [1, 5, 6], [2, 4, 7], [3]]);
-  
-  // January
-  ApplySetNew([[0, 4, 6], [1, 3, 9], [2, 5, 7], [8], [0, 2, 9], [1, 6, 7], [3, 5, 8], [4]]);
-  ApplySetNew([[0, 1, 3], [2, 6, 9], [4, 5, 8], [7]]);
-  ApplySetNew([[0, 7, 8], [1, 5, 9], [2, 3, 4], [6], [0, 4, 9], [1, 2, 8], [3, 6, 7], [5]]);
-  
-	// February
-	ApplySetNew([[0, 2, 8], [1, 3, 6], [5, 7, 9], [4], [0, 3, 5], [2, 4, 7], [6, 8, 9], [1]]);
-	ApplySetNew([[0, 1, 7], [2, 5, 6], [3, 4, 8], [9]]);
-	ApplySetNew([[0, 4, 6], [1, 5, 8], [3, 7, 9], [2], [0, 4, 5], [1, 2, 9], [6, 7, 8], [3]]);
-	
-	// March
-	ApplySetNew([[0, 3, 6], [2, 5, 9], [4, 7, 8], [1], [0, 5, 7], [1, 4, 9], [2, 3, 8], [6]]);
-	ApplySetNew([[0, 8, 9], [1, 2, 3], [4, 5, 6], [7]]);
-	ApplySetNew([[0, 1, 5], [2, 6, 7], [3, 4, 9], [8], [0, 2, 4], [1, 6, 8], [3, 7, 9], [5]]);
-  
-  $("schedule").value = SetToString([[0, 2, 4], [1, 6, 8], [3, 7, 9], [5]]);
-	*/
-	
-	// Regionals 2010
-	/*ApplySetNew([[0, 4, 5], [2, 3, 7], [1, 6], [0, 1, 3], [5, 6, 7], [2, 4]]);
-	ApplySetNew([[0, 2, 6], [1, 4, 7], [3, 5], [1, 2, 5], [3, 4, 6], [0, 7]]);
-	ApplySetNew([[0, 1, 5], [2, 3, 7], [4, 6], [0, 3, 6], [1, 4, 7], [2, 5]]);
-	ApplySetNew([[0, 2, 4], [5, 6, 7], [1, 3], [1, 2, 6], [3, 4, 5], [0, 7]]);
-	ApplySetNew([[2, 3, 5], [4, 6, 7], [0, 1], [0, 2, 7], [1, 3, 4], [5, 6]]);
-	ApplySetNew([[0, 4, 5], [1, 2, 6], [3, 7], [0, 3, 6], [1, 5, 7], [2, 4]]);
-	ApplySetNew([[0, 4, 6], [1, 5, 7], [2, 3]]);
-	ApplySetNew([[0, 1, 3], [2, 4, 5], [6, 7], [0, 2, 7], [3, 5, 6], [1, 4]]);*/
-	
-	//$("schedule").value = SetToString([[0, 1, 4], [2, 6, 7], [3, 5]]);
-	
-	//130,000 or 1,320,000
-	// 2010-2011 Pre-Season (October & November)
-	/*ApplySetNew([[0, 1, 9], [2, 7, 10], [3, 5, 8], [4, 6]]);
-	ApplySetNew([[0, 3, 6], [1, 5, 7], [2, 4, 8], [9, 10]]);
-	ApplySetNew([[0, 4, 5], [1, 6, 10], [7, 8, 9], [2, 3]]);
-	ApplySetNew([[0, 8, 10], [2, 6, 9], [3, 4, 7], [1, 5]]);
-	ApplySetNew([[1, 6, 8], [2, 5, 9], [3, 4, 10], [0, 7]]);
-	ApplySetNew([[0, 4, 9], [1, 2, 3], [5, 6, 10], [7, 8]]);
-	
-	ApplySetNew([[10, 9, 1], [8, 3, 0], [7, 5, 2], [6, 4]]);
-	ApplySetNew([[10, 7, 4], [9, 5, 3], [8, 6, 2], [1, 0]]);
-	ApplySetNew([[10, 6, 5], [9, 4, 0], [3, 2, 1], [8, 7]]);
-	ApplySetNew([[10, 2, 0], [8, 4, 1], [7, 6, 3], [9, 5]]);
-	ApplySetNew([[9, 4, 2], [8, 5, 1], [7, 6, 0], [10, 3]]);
-	ApplySetNew([[10, 6, 1], [9, 8, 7], [5, 4, 0], [3, 2]]);*/
-	
-	// 2010-2011 Season
-	// December 2010
-	/*ApplySetNew([[0,3,6],[2,5,9],[7,8,10],[1,4]]);
-	ApplySetNew([[0,5,7],[1,2,3],[4,6,10],[8,9]]);
-	ApplySetNew([[0,4,9],[1,5,8],[2,6,7],[3,10]]);
-	ApplySetNew([[0,2,10],[1,7,9],[3,4,8],[5,6]]);
-	ApplySetNew([[1,6,9],[2,4,8],[3,5,10],[0,7]]);
-	
-	// January 2011
-	ApplySetNew([[0,6,8],[3,4,7],[5,9,10],[1,2]]);
-	ApplySetNew([[0,1,10],[2,3,9],[4,5,6],[7,8]]);
-	ApplySetNew([[0,5,8],[1,6,10],[2,4,7],[3,9]]);
-	ApplySetNew([[0,1,4],[3,5,7],[8,9,10],[2,6]]);
-	ApplySetNew([[0,2,10],[1,3,8],[6,7,9],[4,5]]);*/
-	
-	// February 2011
-	/*ApplySetNew([[1,2,5],[3,6,8],[4,7,9],[0,10]]);
-	ApplySetNew([[0,3,9],[1,7,10],[2,4,8],[5,6]]);
-	ApplySetNew([[0,1,3],[4,5,10],[6,8,9],[2,7]]);
-	ApplySetNew([[1,6,7],[2,3,5],[4,9,10],[0,8]]);
-	ApplySetNew([[0,2,9],[3,6,10],[5,7,8],[1,4]]);*/
-	/*0=WOOTurtles, 
-	1=Slow-Mo, 
-	2=FBIQ, 
-	3=Outnumbered, 
-	4=7 Dwarves, 
-	5=Peloponnesians, 
-	6=Warriors of Grace, 
-	7=Risers, 
-	8=Calvary Chapel 1 (Ewe Sticky), 
-	9=Reborn, 
-	-10=Calvary Chapel 2- (Cookie Monsters)*/
-	// Reconstructed February 2011
-	/*ApplySetNew([[1,2,5],[3,6],[4,7,9],[0,8]]);
-	ApplySetNew([[0,3,9],[1,7],[2,4,8],[5,6]]);
-	ApplySetNew([[0,1,3],[4,5],[6,8,9],[2,7]]);
-	ApplySetNew([[1,6,7],[2,3,5],[4,9],[0,8]]);
-	ApplySetNew([[0,2,9],[3,6],[5,7,8],[1,4]]);*/
-	
-	// ORIGINAL (unbalanced) March 2011
-//  ApplySetNew([[0,3,7],[1,5,9],[2,6,8],[4]]);
-//  ApplySetNew([[0,4,6],[1,3,8],[2,5,7],[9]]);
-//  ApplySetNew([[0,5,6],[1,8,9],[2,3,4],[7]]);
-//  ApplySetNew([[0,4,9],[1,2,6],[3,7,8],[5]]);
-//  ApplySetNew([[0,1,7],[3,5,9],[4,6,8],[2]]);
-	
-	// BALANCED March 2011
-	/*ApplySetNew([[0,3,4],[1,5,9],[2,6,8],[7]]);
-	ApplySetNew([[0,5,7],[1,3,8],[4,6,9],[2]]);
-	ApplySetNew([[0,1,6],[2,3,7],[4,5,8],[9]]);
-	ApplySetNew([[0,2,4],[3,5,6],[7,8,9],[1]]);
-	ApplySetNew([[0,5,9],[1,2,8],[3,4,7],[6]]);*/
+	//Example:
+  //ApplySetNew([[0,1,7],[3,5,9],[4,6,8],[2]]);
 	
 	//$j("#schedule").val($j("#schedule").val() + CompetitionReport(g_aTeams) + '\n\n' + TwoTeamSiteReport(g_aTeams) + "\n\n" + ByeReport(g_aTeams));
 	
@@ -331,7 +184,7 @@ function pickBalancedSets(best_sets, team_names) {
     
     // TODO: upgrade from v3 (std dev) to v5 (simple square) & do away w/
     // Math.round(*10)
-    var nScore = Math.round(ScoreSet([best_sets[nSet].flatten()]) * 10);
+    var nScore = Math.round(ScoreSet([_(best_sets[nSet]).flatten()]) * 10);
 		if (nLowestScore == null || nScore <= nLowestScore) {
 			if (nScore == nLowestScore)
 			  balancedSets.push(best_sets[nSet]);
@@ -349,111 +202,6 @@ function Assert(boolean, msg) {
 }
 
 function teamWithMultipleByes(team) { return team.nByes > 1; }
-
-function GenerateRoundRobin_OLD(nRounds) {
-	GlobalSetup();
-	
-	var astr = [];
-	var nLowestScore;
-	var bestSets = [];
-	
-	// 2008, Oct quiz meet (6 rounds)
-	/*ApplySet([[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 3, 6, 1, 4, 7, 2, 5, 8]]);
-	ApplySet([[0, 4, 8, 1, 5, 6, 2, 3, 7], [0, 5, 7, 1, 3, 8, 2, 4, 6]]);
-	ApplySet([[0, 1, 7, 2, 3, 8, 4, 5, 6], [0, 3, 5, 1, 4, 8, 2, 6, 7]]);
-	
-	// 2008 Nov quiz meet (6 rounds)
-	ApplySet([[0, 6, 4, 1, 3, 9, 5, 7, 8]]);
-	ApplySet([[0, 6, 8, 1, 9, 5, 3, 4, 7]]);
-	ApplySet([[0, 8, 9, 1, 3, 6, 4, 5, 7]]);
-	ApplySet([[0, 1, 7, 3, 4, 5, 6, 8, 9]]);
-	ApplySet([[0, 3, 6, 1, 4, 8, 5, 7, 9]]);
-	ApplySet([[0, 4, 9, 1, 6, 7, 5, 3, 8]]);
-	// commented-out pre-season, starting fresh with the regular season
-	*/
-	
-	// 2008 Dec quiz meet (5 rounds)
-	/*ApplySet([[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 3, 6, 1, 4, 7, 2, 5, 8]]);
-	ApplySet([[0, 4, 8, 1, 5, 6, 2, 3, 7]]);
-	ApplySet([[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 5, 7, 1, 3, 8, 2, 4, 6]]);
-	
-	// 2009 Jan quiz meet (5 rounds)
-	var round1 = [0, 3, 6, 1, 4, 7, 2, 5, 8];
-	var round2 = [0, 4, 8, 1, 5, 6, 2, 3, 7];
-	var round3 = [0, 5, 7, 1, 3, 8, 2, 4, 6];
-	var round4 = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-	var round5 = [0, 5, 8, 1, 4, 7, 2, 3, 6];
-	
-	ApplySet([round1, round2]);
-	ApplySet([round3]);
-	ApplySet([round4]);
-	ApplySet([round5]);
-	
-	// feb
-	ApplySet([[0, 3, 7, 1, 5, 6, 2, 4, 8], [0, 4, 6, 1, 3, 8, 2, 5, 7]]);
-	ApplySet([[0, 1, 2, 3, 7, 8, 4, 5, 6]]);
-	ApplySet([[0, 3, 4, 1, 5, 7, 2, 6, 8], [0, 5, 8, 1, 3, 6, 2, 4, 7]]);
-	
-	// mar
-	ApplySet([[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 6, 7, 1, 4, 8, 2, 3, 5]]);
-	ApplySet([[0, 7, 8, 1, 5, 6, 2, 3, 4]]);
-	
-	// April
-	ApplySet([[0, 4, 6, 1, 3, 8, 2, 5, 7]]);
-	ApplySet([[0, 5, 8, 1, 4, 7, 2, 3, 6]]);
-	*/
-	
-	/* Randomization test BEFORE
-	ApplySet([[1, 8, 9, 2, 3, 5, 4, 6, 7, 0]]);
-	ApplySet([[0, 7, 9, 1, 5, 6, 3, 4, 8, 2]]);
-	ApplySet([[0, 6, 8, 1, 3, 7, 2, 4, 9, 5]]);
-	ApplySet([[0, 4, 5, 2, 7, 8, 3, 6, 9, 1]]);
-	*/
-  
-  // Randomization test AFTER
-  /*ApplySet([[0, 5, 8, 1, 4, 7, 3, 6, 9, 2]]);
-  ApplySet([[0, 2, 3, 4, 8, 9, 5, 6, 7, 1]]);
-  ApplySet([[0, 4, 6, 1, 3, 8, 2, 7, 9, 5]]);
-  ApplySet([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]]);*/
-  
-	var previous_rounds = [];//Object.toJSON(round1), Object.toJSON(round2), Object.toJSON(round3), Object.toJSON(round4)];
-	// guess I need to code it to avoid duplicates from the same meet
-	
-	var nCombos = g_aCombos.length;
-	// Calculate a Single Round
-	if (nRounds == 1) {
-		for(var Round1 = 0; Round1 < nCombos; ++Round1) {
-		  var combo = g_aCombos[Round1];
-			var nScore = ScoreSet([combo]);
-			
-			// will no longer do duplicates
-			if ((nLowestScore == null || nScore <= nLowestScore) && !previous_rounds.find(function(prev_round) {
-			    var nTeams = prev_round.length;
-			    for (var nTeam = 0; nTeam < nTeams; ++nTeam)
-			      if (combo[nTeam] != prev_round[nTeam])
-			        return false;
-			    return true;
-			  } )) {
-				nLowestScore = nScore;
-				if (nScore == nLowestScore)
-				  bestSets.push([combo]);
-				else
-				  bestSets = [[combo]];
-			}
-		}
-	}
-	// Calculate a Double Round
-	else if (nRounds == 2) {
-	  bestSets = iterateRoundOne(bestSets, nLowestScore, nCombos);
-	}
-	
-	var objBestSet = chooseRandomItem(bestSets);
-	ApplySet(objBestSet);
-	//logDebug('Number of sets: ' + num_sets + ', choosing random set number ' + random_set_num);
-
-	$j('#schedule').val(Object.toJSON(objBestSet) + "\n\n" + SetToString_OLD(objBestSet) + "\n\n" + CompetitionReport(g_aTeams) + '\n\n' + ByeReport(g_aTeams));
-	$j('#generate').attr('disabled', 'disabled');
-}
 
 function chooseRandomItem(array) {
   var num_items = array.length;
@@ -547,7 +295,7 @@ function SetToString_OLD(aSet) {
 	for(var nRound = 0; nRound < nRounds; ++nRound)
 	{
 		var combo = aSet[nRound];
-		var combo_by_names = combo.slice(0, 3).map(GetTeamByNum).pluck("team");
+		var combo_by_names = _(combo.slice(0, 3)).chain().map(GetTeamByNum).pluck("team").value();
 		
 		// create a nested array of sites and teams
 		var sites = [];
@@ -575,7 +323,7 @@ function SetToString(set) {
 	for (var nSite = 0; nSite < nSites; ++nSite) {
 		var combo = set[nSite].slice(0, 3);
 		combo.sort(randomOrder);
-		var combo_by_names = combo.map(GetTeamByNum).pluck("team");
+		var combo_by_names = _(combo).chain().map(GetTeamByNum).pluck("team").value();
 		astr.push(combo_by_names.join("\n") + "\n");
 	}
 	return astr.join("\n");
