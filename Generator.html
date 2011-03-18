@@ -1,12 +1,13 @@
 <html>
 	<head><title>BQ Round Robin Generator</title>
-		<script src="prototype.js"></script>
 		<script src="RoundRobinGenerator3.js"></script>
 	</head>
-	<body>
+	<body onload="$('gen1').removeAttribute('disabled'); $('gen2').removeAttribute('disabled');">
 		<!-- PRE-SEASON input type="text" id="txtTeams" style="width: 600px" value="Poiema, Conquizzadors, Jason's 4, Tital, Skittles, Help Wanted, Seven Brothers, Twelve - Five, The Flock, More Than Conquerors" /-->
 		<!-- LAST SEASON input type="text" id="txtTeams" style="width: 600px" value="Poiema, Conquizzadors, Tital, Skittles, Help Wanted, Seven Brothers, Disciples, The Flock, More Than Conquerors" /><input type="button" onclick="GenerateRoundRobin(1);" value="Generate 1 Round" /-->
-		<input type="text" id="txtTeams" style="width: 600px" value="GPS, Jelly Fish, Super Apostles, Qualified, SCYM, Fools for Christ, Going Places, On Strike, SoundsofSilence, The FB" /><!--  -->
+		<!-- 2010 SEASON type="text" id="txtTeams" style="width: 600px" value="GPS, Jelly Fish, Super Apostles, Qualified, SCYM, Fools for Christ, Going Places, On Strike, SoundsofSilence, The FB" -->
+		<!-- REGIONALS: GPS, Jelly Fish, Super Apostles, Qualified, SCYM, Radical Faith, Lost Boys, On Strike -->
+		<input type="text" id="txtTeams" style="width: 600px" value="WOOTurtles, Slow-Mo, FBIQ, Outnumbered, 7 Dwarves, Peloponnesians, Warriors of Grace, Risers, Ewe Sticky, Reborn, Cookie Monsters" />
 		<input id="gen1" type="button" onclick="GenerateRoundRobin(1);" value="Generate 1 Round" />
 		<input id="gen2" type="button" onclick="GenerateRoundRobin(2);" value="Generate 2 Rounds" />
 		<input id="test1" type="button" onclick="GlobalSetup(); $('tbxSchedule').innerHTML = Object.toJSON(g_aCombos);" value="Show Combinations" />
