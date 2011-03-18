@@ -1,4 +1,6 @@
-﻿var g_aTeams, g_aSites, g_nSites, g_nTeams;
+﻿var $j = jQuery.noConflict();
+
+var g_aTeams, g_aSites, g_nSites, g_nTeams;
 var g_aCombos = [];
 var g_num_combos = 0;
 var g_current_combo_num = 0;
@@ -6,15 +8,23 @@ var g_aSets = [];
 var g_two_team_site;
 var fnZero = function() { return 0; }
 var g_stop_time, g_cancel;
-function $(id) { return document.getElementById(id); }
+//function $(id) { return document.getElementById(id); }
 if (!window.Worker)
   alert('This page will not work in your web browser because it does not support Web Workers. Try Firefox 3.5+ or Chrome.');
-  
+
+$j(document).ready(function() {
+  $j('#generate').click(GenerateRoundRobin);
+  $j('#cancel').click(function() {
+    g_cancel = true;
+    alert('Calculation Cancelled.');
+  });
+});
+
 // TODO: we *really* just need to include prototype... why aren't we?
 // I think it's b/c of the web workers not allowing window/DOM stuff
 
 // not recursive, not well written, etc, etc
-Array.prototype.flatten = function() {
+/*Array.prototype.flatten = function() {
   var len = this.length;
   var results = [];
   for (var n = 0; n < len; ++n) {
@@ -48,7 +58,7 @@ Array.prototype.pluck = function(prop_name) {
 }
 String.prototype.strip = function() {
   return this.replace(/^\s+/, '').replace(/\s+$/, '');
-}
+}*/
 
 // it's great that we're using the deviations and trying every possible combination
 // the next step is to webify it w/ a progress indicator or move it to Python
@@ -125,18 +135,19 @@ function round(num) {
 
 function pushTimerBack() {
   if (!g_num_combos)
-    $('progress').innerHTML = '0%';
+    $j('#progress').html('0%');
   else
-    $('progress').innerHTML = round(g_current_combo_num / g_num_combos) + '%';
+    $j('#progress').html(round(g_current_combo_num / g_num_combos) + '%');
   g_stop_time.setSeconds(g_stop_time.getSeconds() + 10);
   setTimeout(pushTimerBack, 10 * 1000);
 }
 
-function GenerateRoundRobin(nRounds) {
+function GenerateRoundRobin() {
+  var nRounds = parseInt($j('#rounds option:selected').val(), 10);
   // 10 seconds (1000ms in a sec)
   g_stop_time = new Date();
-  var team_names = $("txtTeams").value.split(",").invoke("strip");
-  GlobalSetup(team_names, 10);
+  var team_names = $j('#teams').val().split(",").invoke("strip");
+  GlobalSetup(team_names);
   
 	/*
 	2010 Season
@@ -160,7 +171,7 @@ function GenerateRoundRobin(nRounds) {
 	ApplySetNew([[0, 8, 9], [1, 2, 3], [4, 5, 6], [7]]);
 	ApplySetNew([[0, 1, 5], [2, 6, 7], [3, 4, 9], [8], [0, 2, 4], [1, 6, 8], [3, 7, 9], [5]]);
   
-  $("tbxSchedule").value = SetToString([[0, 2, 4], [1, 6, 8], [3, 7, 9], [5]]);
+  $("schedule").value = SetToString([[0, 2, 4], [1, 6, 8], [3, 7, 9], [5]]);
 	*/
 	
 	// Regionals 2010
@@ -173,7 +184,7 @@ function GenerateRoundRobin(nRounds) {
 	ApplySetNew([[0, 4, 6], [1, 5, 7], [2, 3]]);
 	ApplySetNew([[0, 1, 3], [2, 4, 5], [6, 7], [0, 2, 7], [3, 5, 6], [1, 4]]);*/
 	
-	//$("tbxSchedule").value = SetToString([[0, 1, 4], [2, 6, 7], [3, 5]]);
+	//$("schedule").value = SetToString([[0, 1, 4], [2, 6, 7], [3, 5]]);
 	
 	//130,000 or 1,320,000
 	// 2010-2011 Pre-Season (October & November)
@@ -193,7 +204,7 @@ function GenerateRoundRobin(nRounds) {
 	
 	// 2010-2011 Season
 	// December 2010
-	ApplySetNew([[0,3,6],[2,5,9],[7,8,10],[1,4]]);
+	/*ApplySetNew([[0,3,6],[2,5,9],[7,8,10],[1,4]]);
 	ApplySetNew([[0,5,7],[1,2,3],[4,6,10],[8,9]]);
 	ApplySetNew([[0,4,9],[1,5,8],[2,6,7],[3,10]]);
 	ApplySetNew([[0,2,10],[1,7,9],[3,4,8],[5,6]]);
@@ -204,7 +215,7 @@ function GenerateRoundRobin(nRounds) {
 	ApplySetNew([[0,1,10],[2,3,9],[4,5,6],[7,8]]);
 	ApplySetNew([[0,5,8],[1,6,10],[2,4,7],[3,9]]);
 	ApplySetNew([[0,1,4],[3,5,7],[8,9,10],[2,6]]);
-	ApplySetNew([[0,2,10],[1,3,8],[6,7,9],[4,5]]);
+	ApplySetNew([[0,2,10],[1,3,8],[6,7,9],[4,5]]);*/
 	
 	// February 2011
 	/*ApplySetNew([[1,2,5],[3,6,8],[4,7,9],[0,10]]);
@@ -224,11 +235,11 @@ function GenerateRoundRobin(nRounds) {
 	9=Reborn, 
 	-10=Calvary Chapel 2- (Cookie Monsters)*/
 	// Reconstructed February 2011
-	ApplySetNew([[1,2,5],[3,6],[4,7,9],[0,8]]);
+	/*ApplySetNew([[1,2,5],[3,6],[4,7,9],[0,8]]);
 	ApplySetNew([[0,3,9],[1,7],[2,4,8],[5,6]]);
 	ApplySetNew([[0,1,3],[4,5],[6,8,9],[2,7]]);
 	ApplySetNew([[1,6,7],[2,3,5],[4,9],[0,8]]);
-	ApplySetNew([[0,2,9],[3,6],[5,7,8],[1,4]]);
+	ApplySetNew([[0,2,9],[3,6],[5,7,8],[1,4]]);*/
 	
 	// ORIGINAL (unbalanced) March 2011
 //  ApplySetNew([[0,3,7],[1,5,9],[2,6,8],[4]]);
@@ -238,60 +249,60 @@ function GenerateRoundRobin(nRounds) {
 //  ApplySetNew([[0,1,7],[3,5,9],[4,6,8],[2]]);
 	
 	// BALANCED March 2011
-	ApplySetNew([[0,3,4],[1,5,9],[2,6,8],[7]]);
+	/*ApplySetNew([[0,3,4],[1,5,9],[2,6,8],[7]]);
 	ApplySetNew([[0,5,7],[1,3,8],[4,6,9],[2]]);
 	ApplySetNew([[0,1,6],[2,3,7],[4,5,8],[9]]);
 	ApplySetNew([[0,2,4],[3,5,6],[7,8,9],[1]]);
-	ApplySetNew([[0,5,9],[1,2,8],[3,4,7],[6]]);
+	ApplySetNew([[0,5,9],[1,2,8],[3,4,7],[6]]);*/
 	
-	$("tbxSchedule").value += CompetitionReport(g_aTeams) + '\n\n' + TwoTeamSiteReport(g_aTeams) + "\n\n" + ByeReport(g_aTeams);
+	//$j("#schedule").val($j("#schedule").val() + CompetitionReport(g_aTeams) + '\n\n' + TwoTeamSiteReport(g_aTeams) + "\n\n" + ByeReport(g_aTeams));
 	
 	g_num_rounds = nRounds;
   g_lastRoundSite = g_nSites * (g_num_rounds - 1);
-  $('gen1').disabled = true;
-	$('gen2').disabled = true;
+  $j('#generate').attr('disabled', 'disabled');
   
-  var worker = new Worker('generator_worker.js');
-  worker.onmessage = function(event) {
-    var best_sets = event.data.g_best_sets;
+  // TODO: balancing may be of minimal value, only look at it at the end
+  
+  // Initially, the user can just enter a # of sets (15, for instance)
+  // and all get generated.
+  // Eventually, the user *could* enter the # per day or per meet
+  // and it could "balance" per day or meet
+  
+  // If there are 100+ best_sets, just pick one at random
+  // Otherwise, try each of them & see which generates the lowest score
+  
+  // This script & the other should share the same score generator function
+  // (this page can & should include the other page)
+  
+  // Eventually, it would present the results in an EditableTable
+  // that prints as nicely as Excel
+  // but is editable & saved via localStorage for subsequent runs
+  // and the software could deal graciously with teams being added/deleted
+  
+  genBestSets(function(best_sets) {
     alert('Num Best Sets:' + best_sets.length);
     // instead of just picking one at random, we clear out the data & start
     // over with JUST THIS MEET, so we also have a well-balanced meet
-    
-    // clear everything out, then just apply this meet as tie-breaker
-    GlobalSetup(team_names, 10);
-    ApplySetNew([[0,3,4],[1,5,9],[2,6,8],[7]]);
-    ApplySetNew([[0,5,7],[1,3,8],[4,6,9],[2]]);
-    ApplySetNew([[0,1,6],[2,3,7],[4,5,8],[9]]);
-    ApplySetNew([[0,2,4],[3,5,6],[7,8,9],[1]]);
-    ApplySetNew([[0,5,9],[1,2,8],[3,4,7],[6]]);
-    
-    var balancedSets = [];
-    var nLowestScore = null;
-    
-    var nSets = best_sets.length;
-    for (var nSet = 0; nSet < nSets; ++nSet) {
-      var nScore = ScoreSet([best_sets[nSet].flatten()]);
-  		if (nLowestScore == null || nScore < nLowestScore) {
-  			nLowestScore = nScore;
-  			if (nScore == nLowestScore)
-  			  balancedSets.push(best_sets[nSet]);
-  			else
-  			  balancedSets = [best_sets[nSet]];
-  		}
-    }
+    var balancedSets = pickBalancedSets(best_sets, team_names);
     alert('Num Balanced Sets: ' + balancedSets.length);
     var objBestSet = chooseRandomItem(balancedSets);
     ApplySetNew(objBestSet);
-  	//$("tbxSchedule").value = JSON.stringify(objBestSet) + "\n\n" + SetToString(objBestSet) + "\n\n"
-  	//$("tbxSchedule").value += CompetitionReport(g_aTeams) + '\n\n' + TwoTeamSiteReport(g_aTeams) + "\n\n" + ByeReport(g_aTeams);
+  	$j("#schedule").val(JSON.stringify(objBestSet) + "\n\n" + SetToString(objBestSet) + "\n\n" +
+  	  CompetitionReport(g_aTeams) + '\n\n' + TwoTeamSiteReport(g_aTeams) + "\n\n" + ByeReport(g_aTeams));
+  });
+}
+
+function genBestSets(callback) {
+  var worker = new Worker('generator_worker.js');
+  worker.onmessage = function(event) {
+    callback(event.data.g_best_sets);
   };
   worker.onerror = function(error) {
     alert('There was an error:');
     alert(error.message);
   };
   // trySiteCombos();
-  var data = {
+  worker.postMessage({
     combos: g_aCombos,
     nCumulativeScore: 0,
     prev_sites: [],
@@ -302,11 +313,35 @@ function GenerateRoundRobin(nRounds) {
     g_nTeams: g_nTeams,
     g_num_rounds: g_num_rounds,
     g_nSites: g_nSites
-  };
-  //alert(Object.toJSON(data));
-  worker.postMessage(data);
+  });
 }
 
+function pickBalancedSets(best_sets, team_names) {
+  // clear everything out, then just apply ones that are for this meet as
+  // tie-breakers
+  GlobalSetup(team_names);
+  
+  var balancedSets = [];
+  var nLowestScore = null;
+  
+  var nSets = best_sets.length;
+  for (var nSet = 0; nSet < nSets; ++nSet) {
+    // rounding b/c (unbelievably) there are random differences with scores
+    // like 28.8000000000005 and 28.8 & we want them treated the same
+    
+    // TODO: upgrade from v3 (std dev) to v5 (simple square) & do away w/
+    // Math.round(*10)
+    var nScore = Math.round(ScoreSet([best_sets[nSet].flatten()]) * 10);
+		if (nLowestScore == null || nScore <= nLowestScore) {
+			if (nScore == nLowestScore)
+			  balancedSets.push(best_sets[nSet]);
+			else
+			  balancedSets = [best_sets[nSet]];
+			nLowestScore = nScore;
+		}
+  }
+  return balancedSets;
+}
 
 function Assert(boolean, msg) {
   if (boolean)
@@ -416,9 +451,8 @@ function GenerateRoundRobin_OLD(nRounds) {
 	ApplySet(objBestSet);
 	//logDebug('Number of sets: ' + num_sets + ', choosing random set number ' + random_set_num);
 
-	$("tbxSchedule").value = Object.toJSON(objBestSet) + "\n\n" + SetToString_OLD(objBestSet) + "\n\n" + CompetitionReport(g_aTeams) + '\n\n' + ByeReport(g_aTeams);
-	$('gen1').disabled = true;
-	$('gen2').disabled = true;
+	$j('#schedule').val(Object.toJSON(objBestSet) + "\n\n" + SetToString_OLD(objBestSet) + "\n\n" + CompetitionReport(g_aTeams) + '\n\n' + ByeReport(g_aTeams));
+	$j('#generate').attr('disabled', 'disabled');
 }
 
 function chooseRandomItem(array) {
