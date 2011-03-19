@@ -121,14 +121,12 @@ function GenerateRoundRobin() {
   // Eventually, the user *could* enter the # per day or per meet
   // and it could "balance" per day or meet
   
-  // If there are 100+ best_sets, just pick one at random
-  // Otherwise, try each of them & see which generates the lowest score
-  
   // This script & the other should share the same score generator function
   // (this page can & should include the other page)
+  // The scoring algorithm should be pluggable & have lots of tests
   
   // Eventually, it would present the results in an EditableTable
-  // that prints as nicely as Excel
+  // that prints as nicely as Excel, yet supports CSS & even jQuery customization
   // but is editable & saved via localStorage for subsequent runs
   // and the software could deal graciously with teams being added/deleted
   
@@ -230,8 +228,9 @@ function pickByLookahead(sets, team_names, callback) {
   var lookahead_best_sets = [];
   var nCompletedSets = 0;
   var nLowestScore = null;
+  if (sets.length > 100)
+    sets = chooseRandomItems(sets, 90);
   var nSets = sets.length;
-  nSets = nSets < 50 ? nSets : 20; // don't try *all* combinations, try 20-50
   for (var nSet = 0; nSet < nSets; ++nSet) {
     var set = sets[nSet];
     genBestSets(set, _(function(set, lookahead_sets) {
@@ -261,10 +260,20 @@ function Assert(boolean, msg) {
 
 function teamWithMultipleByes(team) { return team.nByes > 1; }
 
-function chooseRandomItem(array) {
+function chooseRandomItem(array, remove) {
   var num_items = array.length;
 	var random_item_num = Math.floor(Math.random() * num_items);
-	return array[random_item_num];
+	var item = array[random_item_num];
+	array.splice(random_item_num, 1);
+	return item;
+}
+
+function chooseRandomItems(array, num_items) {
+  array = array.slice(); // clone
+  var random_items = [];
+  while (random_items.length < num_items)
+    random_items.push(chooseRandomItem(array, true));
+  return random_items;
 }
 
 function iterateRoundOne(bestSets, nLowestScore, nCombos) {
@@ -376,7 +385,14 @@ function SetToString_OLD(aSet) {
 
 function SetToString(set) {
 	var astr = [];
+	
+	// if last item has 1 team (bye) or 2 teams (2-team site) long, keep it at end
+	var last_item = set[set.length-1];
+	if (last_item.length < 3)
+	  set.splice(set.length-1, 1);
 	set.sort(randomOrder);
+	set.push(last_item);
+	
 	var nSites = set.length;
 	for (var nSite = 0; nSite < nSites; ++nSite) {
 		var combo = set[nSite].slice(0, 3);
@@ -458,8 +474,8 @@ function TeamScore(team) {
 	for(var nTeam = 0; nTeam < g_nTeams; ++nTeam)
 		nDeviations += Math.abs(nMean - team.timesPlayedTeam[nTeam])
 	
-	if (team.nByes >= 2)
-	  nDeviations += 10000; // severely penalize any combo that gives a single team multiple byes
+	// severely penalize any combo that gives a single team multiple byes
+	nDeviations += 10000 * (team.nByes * team.nByes - 1);
 
 	return nDeviations;
 }

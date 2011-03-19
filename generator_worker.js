@@ -173,10 +173,10 @@ function TeamScore5(team) {
     var newNumber = timesPlayedTeam[nTeam];
     sqrTotal += newNumber * newNumber;
 	}
-	// severely penalize combos that give a single team
+	
 	// multiple byes or times in a two-team site
-  if (team.nByes > 1)
-	  sqrTotal += (10000 * (team.nByes - 1));
+  // severely penalize any combo that gives a single team multiple byes
+	nDeviations += 10000 * (team.nByes * team.nByes - 1);
 	if (team.nTwoTeamSite)
 		sqrTotal += (1000000 * (team.nTwoTeamSite * team.nTwoTeamSite));
   return sqrTotal;
