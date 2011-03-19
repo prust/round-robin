@@ -1,4 +1,23 @@
-﻿var $j = jQuery.noConflict();
+﻿/*
+2011 Regionals Round Robin
+
+[[0,2,8],[1,4,6],[3,5,7],[9]]
+[[0,6,9],[1,5,8],[2,3,4],[7]]
+[[1,3,9],[2,5,6],[4,7,8],[0]]
+[[0,4,5],[2,7,9],[3,6,8],[1]]
+[[0,6,7],[1,2,3],[5,8,9],[4]]
+[[0,3,8],[1,6,7],[4,5,9],[2]]
+[[0,1,9],[2,7,8],[3,4,6],[5]]
+[[0,5,7],[1,2,4],[6,8,9],[3]]
+[[0,1,4],[2,5,6],[3,7,9],[8]]
+[[0,3,5],[1,7,8],[2,4,9],[6]]
+[[0,2,9],[1,5,8],[4,6,7],[3]]
+[[1,7,9],[2,5,6],[3,4,8],[0]]
+[[0,1,6],[2,3,7],[4,5,9],[8]]
+[[0,4,7],[1,3,5],[6,8,9],[2]]
+[[0,2,8],[1,5,7],[3,6,9],[4]]
+
+*/
 
 var g_aTeams, g_aSites, g_nSites, g_nTeams;
 var g_aCombos = [];
@@ -6,18 +25,8 @@ var g_num_combos = 0;
 var g_current_combo_num = 0;
 var g_aSets = [];
 var g_two_team_site;
-var fnZero = function() { return 0; }
-var g_stop_time, g_cancel;
 if (!window.Worker)
   alert('This page will not work in your web browser because it does not support Web Workers. Try Firefox 3.5+ or Chrome.');
-
-$j(document).ready(function() {
-  $j('#generate').click(GenerateRoundRobin);
-  $j('#cancel').click(function() {
-    g_cancel = true;
-    alert('Calculation Cancelled.');
-  });
-});
 
 function GlobalSetup(team_names, team_index_to_remove) {
 	g_nTeams = team_names.length;
@@ -75,8 +84,6 @@ function GlobalSetup(team_names, team_index_to_remove) {
 	CreateAllCombos(team_numbers);
 }
 
-var g_num_rounds = -1;
-
 function round(num) {
   var num_parts = num.toString().split('.');
   if (num_parts.length == 2) {
@@ -87,89 +94,6 @@ function round(num) {
   else {
     return num_parts[0];
   }
-}
-
-function pushTimerBack() {
-  if (!g_num_combos)
-    $j('#progress').html('0%');
-  else
-    $j('#progress').html(round(g_current_combo_num / g_num_combos) + '%');
-  g_stop_time.setSeconds(g_stop_time.getSeconds() + 10);
-  setTimeout(pushTimerBack, 10 * 1000);
-}
-
-function GenerateRoundRobin() {
-  var nRounds = parseInt($j('#rounds option:selected').val(), 10);
-  // 10 seconds (1000ms in a sec)
-  g_stop_time = new Date();
-  var team_names = _($j('#teams').val().split(",")).map($j.trim);
-  GlobalSetup(team_names);
-  
-	//Example:
-  //ApplySetNew([[0,1,7],[3,5,9],[4,6,8],[2]]);
-	
-	//$j("#schedule").val($j("#schedule").val() + CompetitionReport(g_aTeams) + '\n\n' + TwoTeamSiteReport(g_aTeams) + "\n\n" + ByeReport(g_aTeams));
-	
-	g_num_rounds = 1;//nRounds;
-  g_lastRoundSite = g_nSites * (g_num_rounds - 1);
-  $j('#generate').attr('disabled', 'disabled');
-  
-  // TODO: balancing may be of minimal value, only look at it at the end
-  
-  // Initially, the user can just enter a # of sets (15, for instance)
-  // and all get generated.
-  // Eventually, the user *could* enter the # per day or per meet
-  // and it could "balance" per day or meet
-  
-  // This script & the other should share the same score generator function
-  // (this page can & should include the other page)
-  // The scoring algorithm should be pluggable & have lots of tests
-  
-  // Eventually, it would present the results in an EditableTable
-  // that prints as nicely as Excel, yet supports CSS & even jQuery customization
-  // but is editable & saved via localStorage for subsequent runs
-  // and the software could deal graciously with teams being added/deleted
-  
-  var final_sets = [];
-  
-  function tryNextSet() {
-    genBestSets(null, function(best_sets) {
-      // instead of just picking one at random, we clear out the data & start
-      // over with JUST THIS MEET, so we also have a well-balanced meet
-      //var balancedSets = pickBalancedSets(best_sets, team_names);
-      
-      //alert('Number of ties: ' + best_sets.length);
-      //var best_set = chooseRandomItem(best_sets);
-      pickByLookahead(best_sets, team_names, function(best_sets) {
-        var best_set = chooseRandomItem(best_sets);
-        final_sets.push(best_set);
-        ApplySetNew(best_set);
-      	
-      	if (final_sets.length < nRounds) {
-      	  tryNextSet();
-      	}
-      	else {
-      	  var results = [];
-      	  results = results.concat(_(final_sets).map(JSON.stringify));
-        	results.push('\n');
-        	var nRound = 1;
-        	results = results.concat(_(final_sets).map(function(set) {
-        	  return 'Round ' + (nRound++) + '\n' + SetToString(set);
-        	}));
-        	results.push('\n');
-        	results.push(CompetitionReport(g_aTeams));
-        	results.push('\n');
-        	results.push(TwoTeamSiteReport(g_aTeams));
-        	results.push('\n');
-        	results.push(ByeReport(g_aTeams));
-        	results.push('\n');
-      	  $j("#schedule").val(results.join('\n'));
-      	}
-    	});
-    });
-  }
-  
-  tryNextSet();
 }
 
 function genBestSets(set_to_apply, callback) {
@@ -186,12 +110,12 @@ function genBestSets(set_to_apply, callback) {
     combos: g_aCombos,
     nCumulativeScore: 0,
     prev_sites: [],
-    g_lastRoundSite: g_lastRoundSite,
+    g_lastRoundSite: 0,
     g_aTeams: g_aTeams,
     g_two_team_site: g_two_team_site,
     g_current_combo_num: g_current_combo_num,
     g_nTeams: g_nTeams,
-    g_num_rounds: g_num_rounds,
+    g_num_rounds: 1,
     g_nSites: g_nSites,
     set_to_apply: set_to_apply
   });
@@ -207,12 +131,7 @@ function pickBalancedSets(best_sets, team_names) {
   
   var nSets = best_sets.length;
   for (var nSet = 0; nSet < nSets; ++nSet) {
-    // rounding b/c (unbelievably) there are random differences with scores
-    // like 28.8000000000005 and 28.8 & we want them treated the same
-    
-    // TODO: upgrade from v3 (std dev) to v5 (simple square) & do away w/
-    // Math.round(*10)
-    var nScore = Math.round(ScoreSet([_(best_sets[nSet]).flatten()]) * 10);
+    var nScore = ScoreSet([_(best_sets[nSet]).flatten()]);
 		if (nLowestScore == null || nScore <= nLowestScore) {
 			if (nScore == nLowestScore)
 			  balancedSets.push(best_sets[nSet]);
@@ -276,41 +195,7 @@ function chooseRandomItems(array, num_items) {
   return random_items;
 }
 
-function iterateRoundOne(bestSets, nLowestScore, nCombos) {
-	for(var Round1 = 0; Round1 < nCombos; ++Round1) {
-	  logDebug(Round1);
-		for(var Round2 = 0; Round2 < nCombos; ++Round2) {
-		  startTime('innerLoop');
-		  startTime('scoreSet');
-			var nScore = ScoreSet([g_aCombos[Round1], g_aCombos[Round2]]);
-			stopTime('scoreSet');
-			if (nLowestScore == null || nScore < nLowestScore) {
-				nLowestScore = nScore;
-				if (nScore == nLowestScore)
-				  bestSets.push([g_aCombos[Round1], g_aCombos[Round2]]);
-				else
-				  bestSets = [[g_aCombos[Round1], g_aCombos[Round2]]];
-			}
-			stopTime('innerLoop');
-		}
-	}
-	return bestSets;
-}
-
-function ApplySet(aSet) {
-	var nRounds = aSet.length;
-	for(var nRound = 0; nRound < nRounds; ++nRound) {
-		var combo = aSet[nRound];
-		IncrementTimesPlayed3(g_aTeams[combo[0]], g_aTeams[combo[1]], g_aTeams[combo[2]]);
-		IncrementTimesPlayed3(g_aTeams[combo[3]], g_aTeams[combo[4]], g_aTeams[combo[5]]);
-		IncrementTimesPlayed3(g_aTeams[combo[6]], g_aTeams[combo[7]], g_aTeams[combo[8]]);
-		
-		if (combo.length == 10)
-			g_aTeams[combo[9]].nByes += 1;
-	}
-}
-
-function ApplySetNew(set) {
+function ApplySet(set) {
 	var nSites = set.length;
 	for(var nSite = 0; nSite < nSites; ++nSite) {
 		var combo = set[nSite];
@@ -350,39 +235,8 @@ function ApplySetNew(set) {
 	}
 }
 
-// we randomize the position of the triads
+// randomize the position of the triads
 // and the position of each team within each triad
-// at this point because we haven't yet programmed the system
-// to know how to handle nulls earlier (say, only two teams competing in Site 1)
-// currently it only knows how to handle a list w/ 8 teams in it, rather than a
-// list with 9 items and one of them is blank
-function SetToString_OLD(aSet) {
-	var nRounds = aSet.length;
-	var astr = [];
-	for(var nRound = 0; nRound < nRounds; ++nRound)
-	{
-		var combo = aSet[nRound];
-		var combo_by_names = _(combo.slice(0, 3)).chain().map(GetTeamByNum).pluck("team").value();
-		
-		// create a nested array of sites and teams
-		var sites = [];
-		sites.push(combo_by_names.slice(0, 3));
-		sites.push(combo_by_names.slice(3, 6));
-		sites.push(combo_by_names.slice(6, 9));
-		if (combo_by_names.length > 9)
-		  sites.push(combo_by_names.slice(9, 12));
-		
-		astr.push("Round " + (nRound + 1));
-		sites.sort(randomOrder);
-		for (var nSite = 0; nSite < sites.length; ++nSite) {
-		  var site = sites[nSite];
-		  site.sort(randomOrder);
-		  astr.push(site.join("\n") + "\n");
-		}	
-	}
-	return astr.join("\n");
-}
-
 function SetToString(set) {
 	var astr = [];
 	
@@ -418,7 +272,6 @@ function ScoreSet(aSet, aSet2) {
 	var nScore = 0;
 	
 	// simulate placing 9 teams in 9 sites
-	startTime('simulate');
 	var nRounds = aSet.length;
 	for(var nRound = 0; nRound < nRounds; ++nRound) {
 		var combo = aSet[nRound];
@@ -429,26 +282,25 @@ function ScoreSet(aSet, aSet2) {
 		if (combo.length == 10)
 			g_aTeams[combo[9]].nByes += 1;
 	}
-	stopTime('simulate');
 	
 	// if there's only 1 set, add up the score
 	// else if there's a 2nd set, recurse & take *that* score
 	if (!aSet2) {
-  	startTime('addupscore');
   	var nTeams = g_aTeams.length;
   	for (var nTeam = 0; nTeam < nTeams; ++nTeam) {
   		var team;
   		if (team = g_aTeams[nTeam])
   			nScore += TeamScore(team);
   	}
-  	stopTime('addupscore');
+  	// we have to round b/c (unbelievably) there are random differences with
+  	// scores like 28.8000000000005 & 28.8 and we want them treated the same
+    nScore = Math.round(nScore * 10)
   }
   else {
     nScore = ScoreSet(aSet2);
   }
 	
 	// simulate placing 9 teams in 9 sites
-	startTime('decrement');
 	var nRounds = aSet.length;
 	for(var nRound = 0; nRound < nRounds; ++nRound) {
 		var combo = aSet[nRound];
@@ -459,7 +311,6 @@ function ScoreSet(aSet, aSet2) {
 		if (combo.length == 10)
 			g_aTeams[combo[9]].nByes -= 1;
 	}
-	stopTime('decrement');
 	
 	return nScore;
 }
@@ -482,23 +333,21 @@ function TeamScore(team) {
 
 // fourth version based on standard deviation code from:
 // http://www.cs.miami.edu/~burt/learning/Math119/js-ComputeStdDev.html
-function TeamScore_NEW(team) {
-	var nSum = 0;
-	var nDeviations = 0;
-	var sqrTotal = 0;
-	var timesPlayedTeam = team.timesPlayedTeam;
-	for(var nTeam = 0; nTeam < g_nTeams; ++nTeam) {
-    var newNumber = timesPlayedTeam[nTeam];
-    nSum += newNumber;
-    sqrTotal += (newNumber * newNumber);
-	}
-  if (team.nByes >= 2)
-	  nDeviations += 10000; // severely penalize any combo that gives a single team multiple byes
-  variance = (sqrTotal - ((nSum * nSum)/g_nTeams))/g_nTeams;
-  return Math.sqrt(variance)
-}
-
-
+//function TeamScore_NEW(team) {
+//	var nSum = 0;
+//	var nDeviations = 0;
+//	var sqrTotal = 0;
+//	var timesPlayedTeam = team.timesPlayedTeam;
+//	for(var nTeam = 0; nTeam < g_nTeams; ++nTeam) {
+//    var newNumber = timesPlayedTeam[nTeam];
+//    nSum += newNumber;
+//    sqrTotal += (newNumber * newNumber);
+//	}
+//  if (team.nByes >= 2)
+//	  nDeviations += 10000; // severely penalize any combo that gives a single team multiple byes
+//  variance = (sqrTotal - ((nSum * nSum)/g_nTeams))/g_nTeams;
+//  return Math.sqrt(variance)
+//}
 
 function IncrementTimesPlayed3(team1, team2, team3)
 {
@@ -583,10 +432,6 @@ function AddToCombo(aTeamsUsed, aTeamsLeft, combos) {
 	}
 }
 
-
-function GetTeam(strName) {
-	return g_aTeams.find(function(team) { return team.team == strName; });
-}
 function GetTeamByNum(num_team_searched_for) {
   return g_aTeams[num_team_searched_for];
 }
@@ -621,22 +466,16 @@ function TwoTeamSiteReport(teams) {
 	return result;
 }
 
-// logging "debug" messages (interesting only to the programmer)
-function logDebug(str) {
-  if (window.console && console.log)
-    console.log(str);
-}
-
 // emulates all of Python's List slice functionality (with the "list[]" notation)
 // http://docs.python.org/library/stdtypes.html#sequence-types-str-unicode-list-tuple-buffer-xrange
 Array.prototype.slice = function(start, stop, step) {
   var len = this.length;
-  if (isOmitted(step)) step = 1;
+  if (step == null) step = 1;
 
   // if start or stop are omitted, they become "end" values
-  if (isOmitted(start))
+  if (start == null)
     start = step > 0 ? 0 : len;
-  if (isOmitted(stop))
+  if (stop == null)
     stop = step > 0 ? len : 0;
 
   // if start or stop are greater than the length, use the length
@@ -655,39 +494,5 @@ Array.prototype.slice = function(start, stop, step) {
 }
 
 function randomOrder() {
-  return (Math.round(Math.random())-0.5);
-}
-
-function isOmitted(val) {
-  return typeof val === "undefined" || val === null;
-}
-
-// time functions
-var timers = {};
-function startTime(strTimer)
-{
-	var timer = (strTimer in timers) ? timers[strTimer] : timers[strTimer] = { total: 0, countStart: 0, countStop: 0 };
-	if (!timer.startTime)
-		timer.startTime = [new Date()];
-	else
-		timer.startTime.push(new Date());
-	++timer.countStart;
-}
-function stopTime(strTimer)
-{
-	var timer = timers[strTimer];
-	// IEONLY: Not sure if other browsers implement array.pop()
-	timer.total += new Date() - timer.startTime.pop();
-	++timer.countStop;
-}
-function getTimes()
-{
-	var astrTimes = [];
-	for (key in timers) {
-		var timer = timers[key];
-		if (timer.countStart != timer.countStop) alert("start/stop times don't match: " + key);
-		astrTimes.push(timer.total + "ms - " + key + " (" + timer.countStart + ")");
-	}
-	timers = {};
-	return astrTimes.join("\n");
+  return Math.round(Math.random()) - 0.5;
 }
