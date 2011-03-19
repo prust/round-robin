@@ -4,7 +4,10 @@
 	  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.js"></script>
 	  <script src="underscore-1.1.4.js"></script>
 	  <script src="backbone-0.3.3.js"></script>
+	  <script src="backbone-localstorage.js"></script>
 		<script src="RoundRobinGenerator3.js"></script>
+		<script src="meet_model.js"></script>
+		<script src="meet_view.js"></script>
 		<script src="app_view.js"></script>
 	</head>
 	<body id="round-robin-app">
@@ -14,28 +17,9 @@
 		<!-- REGIONALS: GPS, Jelly Fish, Super Apostles, Qualified, SCYM, Radical Faith, Lost Boys, On Strike -->
 		<!-- 2010-2011 Season: WOOTurtles, Slow-Mo, FBIQ, Outnumbered, 7 Dwarves, Peloponnesians, Warriors of Grace, Risers, Ewe Sticky, Reborn, Cookie Monsters-->
 		<label for="teams">Teams: </label><br>
-		<input type="text" id="teams" style="width: 600px" value="Sword Savers, The Odds, Wooturtles, Slo-Mo, UM, 7 Dwarves, Risers, Outnumbered, Peloponnesians, FBIQ" />
-		<label for="rounds">Number of Rounds: </label>
-		<select id="rounds">
-		  <option>1</option>
-		  <option>2</option>
-		  <option>3</option>
-		  <option>4</option>
-		  <option>5</option>
-		  <option>6</option>
-		  <option>7</option>
-		  <option>8</option>
-		  <option>9</option>
-		  <option>10</option>
-		  <option>11</option>
-		  <option>12</option>
-		  <option>13</option>
-		  <option>14</option>
-		  <option>15</option>
-		</select>
-		<input id="generate" type="button" value="Generate" />
-		<span id="progress">&nbsp;</span> 
-		<input id="cancel" type="button" value="Cancel" /><br />
-		<textarea id="schedule" rows="50" cols="150"></textarea>
+		<input id="teams" type="text" style="width: 600px" value="Sword Savers, The Odds, Wooturtles, Slo-Mo, UM, 7 Dwarves, Risers, Outnumbered, Peloponnesians, FBIQ" /><br>
+		<input id="create_meet" type="button" value="Create Meet" /><br>
+		
+		<div id="meets"></div>
 	</body>
 </html>

@@ -121,7 +121,7 @@ function genBestSets(set_to_apply, callback) {
   });
 }
 
-function pickBalancedSets(best_sets, team_names) {
+function pickBalancedSets(best_sets) {
   // clear everything out, then just apply ones that are for this meet as
   // tie-breakers
   GlobalSetup(team_names);
@@ -143,7 +143,7 @@ function pickBalancedSets(best_sets, team_names) {
   return balancedSets;
 }
 
-function pickByLookahead(sets, team_names, callback) {
+function pickByLookahead(sets, callback) {
   var lookahead_best_sets = [];
   var nCompletedSets = 0;
   var nLowestScore = null;
