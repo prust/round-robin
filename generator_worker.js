@@ -8,6 +8,8 @@ onmessage = function(event) {
   this.g_nSites = event.data.g_nSites;
   this.g_best_sets = [];
   this.g_lowest_score = -1;
+  if (event.data.set_to_apply)
+    ApplySetNew(event.data.set_to_apply);
   trySiteCombos(event.data.combos, event.data.nCumulativeScore, event.data.prev_sites);
   postMessage({ g_best_sets: g_best_sets });
 }
@@ -185,6 +187,46 @@ function TeamScore5(team) {
 function TeamScoreDiff(nTimesPlayed) {
   var newTimesPlayed = nTimesPlayed + 1;
   return (newTimesPlayed * newTimesPlayed) - (nTimesPlayed * nTimesPlayed);
+}
+
+function ApplySetNew(set) {
+	var nSites = set.length;
+	for(var nSite = 0; nSite < nSites; ++nSite) {
+		var combo = set[nSite];
+		
+		// this is IDENTICAL to above, see if we can't make it a function?
+		// and pass in "+1" or "-1" for increment and decrement?
+		// setup teams
+    var nTeams = combo.length;
+    var team1 = g_aTeams[combo[0]];
+    var team2 = nTeams > 1 ? g_aTeams[combo[1]] : null;
+    var team3 = nTeams > 2 ? g_aTeams[combo[2]] : null;
+    
+    // setup team #s
+    var team1_nTeam = team1.nTeam;
+    var team2_nTeam = team2 ? team2.nTeam : -1;
+    var team3_nTeam = team3 ? team3.nTeam : -1;
+    
+    // increment everything
+    if (team2) {
+      ++team1.timesPlayedTeam[team2_nTeam];
+      ++team2.timesPlayedTeam[team1_nTeam];
+  	  if (team3) {
+  	    ++team1.timesPlayedTeam[team3_nTeam];
+  	    ++team2.timesPlayedTeam[team3_nTeam];
+  	    ++team3.timesPlayedTeam[team1_nTeam];
+  	    ++team3.timesPlayedTeam[team2_nTeam];
+  	  }
+  	}
+  	else {
+  	  ++team1.nByes;
+  	}
+		
+		if (nTeams == 2) {
+			++team1.nTwoTeamSite;
+			++team2.nTwoTeamSite;
+		}
+	}
 }
 
 

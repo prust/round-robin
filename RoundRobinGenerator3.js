@@ -110,7 +110,7 @@ function GenerateRoundRobin() {
 	
 	//$j("#schedule").val($j("#schedule").val() + CompetitionReport(g_aTeams) + '\n\n' + TwoTeamSiteReport(g_aTeams) + "\n\n" + ByeReport(g_aTeams));
 	
-	g_num_rounds = nRounds;
+	g_num_rounds = 1;//nRounds;
   g_lastRoundSite = g_nSites * (g_num_rounds - 1);
   $j('#generate').attr('disabled', 'disabled');
   
@@ -132,20 +132,49 @@ function GenerateRoundRobin() {
   // but is editable & saved via localStorage for subsequent runs
   // and the software could deal graciously with teams being added/deleted
   
-  genBestSets(function(best_sets) {
-    alert('Num Best Sets:' + best_sets.length);
-    // instead of just picking one at random, we clear out the data & start
-    // over with JUST THIS MEET, so we also have a well-balanced meet
-    var balancedSets = pickBalancedSets(best_sets, team_names);
-    alert('Num Balanced Sets: ' + balancedSets.length);
-    var objBestSet = chooseRandomItem(balancedSets);
-    ApplySetNew(objBestSet);
-  	$j("#schedule").val(JSON.stringify(objBestSet) + "\n\n" + SetToString(objBestSet) + "\n\n" +
-  	  CompetitionReport(g_aTeams) + '\n\n' + TwoTeamSiteReport(g_aTeams) + "\n\n" + ByeReport(g_aTeams));
-  });
+  var final_sets = [];
+  
+  function tryNextSet() {
+    genBestSets(null, function(best_sets) {
+      // instead of just picking one at random, we clear out the data & start
+      // over with JUST THIS MEET, so we also have a well-balanced meet
+      //var balancedSets = pickBalancedSets(best_sets, team_names);
+      
+      //alert('Number of ties: ' + best_sets.length);
+      //var best_set = chooseRandomItem(best_sets);
+      pickByLookahead(best_sets, team_names, function(best_sets) {
+        var best_set = chooseRandomItem(best_sets);
+        final_sets.push(best_set);
+        ApplySetNew(best_set);
+      	
+      	if (final_sets.length < nRounds) {
+      	  tryNextSet();
+      	}
+      	else {
+      	  var results = [];
+      	  results = results.concat(_(final_sets).map(JSON.stringify));
+        	results.push('\n');
+        	var nRound = 1;
+        	results = results.concat(_(final_sets).map(function(set) {
+        	  return 'Round ' + (nRound++) + '\n' + SetToString(set);
+        	}));
+        	results.push('\n');
+        	results.push(CompetitionReport(g_aTeams));
+        	results.push('\n');
+        	results.push(TwoTeamSiteReport(g_aTeams));
+        	results.push('\n');
+        	results.push(ByeReport(g_aTeams));
+        	results.push('\n');
+      	  $j("#schedule").val(results.join('\n'));
+      	}
+    	});
+    });
+  }
+  
+  tryNextSet();
 }
 
-function genBestSets(callback) {
+function genBestSets(set_to_apply, callback) {
   var worker = new Worker('generator_worker.js');
   worker.onmessage = function(event) {
     callback(event.data.g_best_sets);
@@ -165,7 +194,8 @@ function genBestSets(callback) {
     g_current_combo_num: g_current_combo_num,
     g_nTeams: g_nTeams,
     g_num_rounds: g_num_rounds,
-    g_nSites: g_nSites
+    g_nSites: g_nSites,
+    set_to_apply: set_to_apply
   });
 }
 
@@ -194,6 +224,34 @@ function pickBalancedSets(best_sets, team_names) {
 		}
   }
   return balancedSets;
+}
+
+function pickByLookahead(sets, team_names, callback) {
+  var lookahead_best_sets = [];
+  var nCompletedSets = 0;
+  var nLowestScore = null;
+  var nSets = sets.length;
+  nSets = nSets < 50 ? nSets : 20; // don't try *all* combinations, try 20-50
+  for (var nSet = 0; nSet < nSets; ++nSet) {
+    var set = sets[nSet];
+    genBestSets(set, _(function(set, lookahead_sets) {
+      var nLSets = lookahead_sets.length;
+      for (var nLSet = 0; nLSet < nLSets; ++nLSet) {
+        var lookahead_set = lookahead_sets[nLSet];
+        var nScore = Math.round(ScoreSet([_(set).flatten()], [_(lookahead_set).flatten()]) * 10);
+        if (nLowestScore == null || nScore <= nLowestScore) {
+          if (nScore == nLowestScore && !_(lookahead_best_sets).include(set))
+            lookahead_best_sets.push(set);
+          else
+            lookahead_best_sets = [set];
+          nLowestScore = nScore;
+        }
+      }
+      nCompletedSets++;
+      if (nCompletedSets == nSets)
+        callback(lookahead_best_sets);
+    }).bind(null, set));
+  }
 }
 
 function Assert(boolean, msg) {
@@ -329,7 +387,18 @@ function SetToString(set) {
 	return astr.join("\n");
 }
 
-function ScoreSet(aSet) {
+/*
+ScoreSet(aSet[, aSet2])
+
+Calculates scores of one (or possibly a sequence of sequential sets)
+by temporarily making it seem as though the teams all played each-other,
+adding up the score, and then decrementing to return the teams to their original
+state.
+
+TODO: wouldn't it be simpler to just clone the teams & increment the clones?
+
+*/
+function ScoreSet(aSet, aSet2) {
 	var nScore = 0;
 	
 	// simulate placing 9 teams in 9 sites
@@ -346,15 +415,21 @@ function ScoreSet(aSet) {
 	}
 	stopTime('simulate');
 	
-	// add up the score
-	startTime('addupscore');
-	var nTeams = g_aTeams.length;
-	for (var nTeam = 0; nTeam < nTeams; ++nTeam) {
-		var team;
-		if (team = g_aTeams[nTeam])
-			nScore += TeamScore(team);
-	}
-	stopTime('addupscore');
+	// if there's only 1 set, add up the score
+	// else if there's a 2nd set, recurse & take *that* score
+	if (!aSet2) {
+  	startTime('addupscore');
+  	var nTeams = g_aTeams.length;
+  	for (var nTeam = 0; nTeam < nTeams; ++nTeam) {
+  		var team;
+  		if (team = g_aTeams[nTeam])
+  			nScore += TeamScore(team);
+  	}
+  	stopTime('addupscore');
+  }
+  else {
+    nScore = ScoreSet(aSet2);
+  }
 	
 	// simulate placing 9 teams in 9 sites
 	startTime('decrement');
