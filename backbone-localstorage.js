@@ -49,8 +49,18 @@ _.extend(Store.prototype, {
   },
 
   // Return the array of all models currently in storage.
-  findAll: function() {
-    return _.values(this.data);
+  findAll: function(filters) {
+    var records = _.values(this.data);
+    if (filters) {
+      return _.select(records, function(record) {
+        return _(filters).chain().keys().all(function(field) {
+          return record[field] == filters[field];
+        }).value();
+      });      
+    }
+    else {
+      return records;
+    } 
   },
 
   // Delete a model from `this.data`, returning it.
@@ -70,7 +80,7 @@ Backbone.sync = function(method, model, success, error) {
   var store = model.localStorage || model.collection.localStorage;
 
   switch (method) {
-    case "read":    resp = model.id ? store.find(model) : store.findAll(); break;
+    case "read":    resp = model.id ? store.find(model) : store.findAll(model.filters); break;
     case "create":  resp = store.create(model);                            break;
     case "update":  resp = store.update(model);                            break;
     case "delete":  resp = store.destroy(model);                           break;
