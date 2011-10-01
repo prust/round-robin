@@ -29,7 +29,11 @@ $(function() {
       this.cancel = true;
     },
     generateRounds: function(nRounds) {
-      // TODO: balancing may be of minimal value, only look at it at the end
+      // TODO: Run the competition reports in the app_view after generating or
+      // loading a meet, based on all loaded meets instead of based on globals
+      
+      // TODO: we should do balancing for picking the last set of a meet
+      // Q: Instead of, or in addition to, pickByLookahead? Prob instead of?
       
       // Initially, the user can just enter a # of sets (15, for instance)
       // and all get generated.
