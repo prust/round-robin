@@ -121,28 +121,6 @@ function genBestSets(set_to_apply, callback) {
   });
 }
 
-function pickBalancedSets(best_sets) {
-  // clear everything out, then just apply ones that are for this meet as
-  // tie-breakers
-  GlobalSetup(team_names);
-  
-  var balancedSets = [];
-  var nLowestScore = null;
-  
-  var nSets = best_sets.length;
-  for (var nSet = 0; nSet < nSets; ++nSet) {
-    var nScore = ScoreSet([_(best_sets[nSet]).flatten()]);
-		if (nLowestScore == null || nScore <= nLowestScore) {
-			if (nScore == nLowestScore)
-			  balancedSets.push(best_sets[nSet]);
-			else
-			  balancedSets = [best_sets[nSet]];
-			nLowestScore = nScore;
-		}
-  }
-  return balancedSets;
-}
-
 function pickByLookahead(sets, callback) {
   var lookahead_best_sets = [];
   var nCompletedSets = 0;

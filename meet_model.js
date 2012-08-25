@@ -28,7 +28,7 @@ $(function() {
     cancel: function() {
       this.cancel = true;
     },
-    generateRounds: function(nRounds) {
+    generateRound: function() {
       // TODO: Run the competition reports in the app_view after generating or
       // loading a meet, based on all loaded meets instead of based on globals
       
@@ -48,29 +48,18 @@ $(function() {
       // that prints as nicely as Excel, yet supports CSS & even jQuery customization
       // but is editable & saved via localStorage for subsequent runs
       // and the software could deal graciously with teams being added/deleted
-      
-      var tryNextSet = _.bind(function() {
-        if (this.cancel)
-          return alert('Round-Robin Generation Cancelled');
+
+      genBestSets(null, _.bind(function(best_sets) {
+        // instead of just picking one at random, we clear out the data & start
+        // over with JUST THIS MEET, so we also have a well-balanced meet
+        //var balancedSets = pickBalancedSets(best_sets, team_names);
         
-        genBestSets(null, _.bind(function(best_sets) {
-          // instead of just picking one at random, we clear out the data & start
-          // over with JUST THIS MEET, so we also have a well-balanced meet
-          //var balancedSets = pickBalancedSets(best_sets, team_names);
-          
-          pickByLookahead(best_sets, _.bind(function(best_sets) {
-            var best_set = chooseRandomItem(best_sets);
-            this.rounds.create({'set': best_set, 'meet_id': this.id});
-            ApplySet(best_set);
-          	
-          	if (this.rounds.length < nRounds) {
-          	  tryNextSet();
-          	}
-        	}, this));
-        }, this));
-      }, this);
-      
-      tryNextSet();
+        pickByLookahead(best_sets, _.bind(function(best_sets) {
+          var best_set = chooseRandomItem(best_sets);
+          this.rounds.create({'set': best_set, 'meet_id': this.id});
+          ApplySet(best_set);
+      	}, this));
+      }, this));
     },
     clear: function() {
       this.destroy();

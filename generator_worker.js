@@ -4,7 +4,6 @@ onmessage = function(event) {
   this.g_two_team_site = event.data.g_two_team_site
   this.g_current_combo_num = event.data.g_current_combo_num;
   this.g_nTeams = event.data.g_nTeams;
-  this.g_num_rounds = event.data.g_num_rounds;
   this.g_nSites = event.data.g_nSites;
   this.g_best_sets = [];
   this.g_lowest_score = -1;
@@ -123,7 +122,7 @@ function trySiteCombos(combos, nCumulativeScore, prev_sites) {
     }
     
     // if we're at a leaf-node, possibly add to list of best scores
-    if (last_round && (nSitesDone == g_nSites * g_num_rounds)) {
+    if (last_round && (nSitesDone == g_nSites)) {
       startTime('leaf-node / scoring');
       if (g_lowest_score == -1 || new_score <= g_lowest_score) {
         var set = [].concat(prev_sites);

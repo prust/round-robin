@@ -13,24 +13,6 @@ $(function() {
     },
     render: function() {
       var html =
-        '<label for="rounds">Number of Rounds: </label>' + 
-		    '<select id="rounds">' + 
-		    '  <option>1</option>' + 
-		    '  <option>2</option>' + 
-		    '  <option>3</option>' + 
-		    '  <option>4</option>' + 
-		    '  <option>5</option>' + 
-		    '  <option>6</option>' + 
-		    '  <option>7</option>' + 
-		    '  <option>8</option>' + 
-		    '  <option>9</option>' + 
-		    '  <option>10</option>' + 
-		    '  <option>11</option>' + 
-		    '  <option>12</option>' + 
-		    '  <option>13</option>' + 
-		    '  <option>14</option>' + 
-		    '  <option>15</option>' + 
-		    '</select> ' + 
 		    '<input id="generate" type="button" value="Generate" />' + 
 		    '<span id="progress">&nbsp;</span>' + 
 		    '<input id="cancel" type="button" value="Cancel" /><br />' + 
@@ -60,8 +42,7 @@ $(function() {
     },
     generateRoundRobin: function() {
       this.$('#generate').attr('disabled', 'disabled');
-      var nRounds = parseInt(this.$('#rounds option:selected').val(), 10);
-      this.model.generateRounds(nRounds);
+      this.model.generateRound();
     }
   });
 });
