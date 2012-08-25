@@ -1,3 +1,5 @@
+importScripts('underscore-1.1.4.js');
+
 onmessage = function(event) {
   this.g_lastRoundSite = event.data.g_lastRoundSite;
   this.g_aTeams = event.data.g_aTeams;
@@ -7,10 +9,174 @@ onmessage = function(event) {
   this.g_nSites = event.data.g_nSites;
   this.g_best_sets = [];
   this.g_lowest_score = -1;
-  if (event.data.set_to_apply)
-    ApplySetNew(event.data.set_to_apply);
-  trySiteCombos(event.data.combos, event.data.nCumulativeScore, event.data.prev_sites);
-  postMessage({ g_best_sets: g_best_sets });
+  this.g_aCombos = event.data.combos;
+  
+  genBestSets(null, function(best_sets) {
+    // instead of just picking one at random, we clear out the data & start
+    // over with JUST THIS MEET, so we also have a well-balanced meet
+    //var balancedSets = pickBalancedSets(best_sets, team_names);
+    
+    pickByLookahead(best_sets, function(best_sets) {
+      var best_set = chooseRandomItem(best_sets);
+      postMessage({ best_set: best_set });
+    });
+  });
+}
+
+function genBestSets(set_to_apply, callback) {
+  if (set_to_apply)
+    ApplySetNew(set_to_apply);
+  trySiteCombos(g_aCombos, 0, []);
+  callback(g_best_sets);
+}
+
+function pickByLookahead(sets, callback) {
+  var lookahead_best_sets = [];
+  var nCompletedSets = 0;
+  var nLowestScore = null;
+  if (sets.length > 100)
+    sets = chooseRandomItems(sets, 90);
+  var nSets = sets.length;
+  for (var nSet = 0; nSet < nSets; ++nSet) {
+    var set = sets[nSet];
+    genBestSets(set, function(set, lookahead_sets) {
+      var nLSets = lookahead_sets.length;
+      for (var nLSet = 0; nLSet < nLSets; ++nLSet) {
+        var lookahead_set = lookahead_sets[nLSet];
+        var nScore = Math.round(ScoreSet([_(set).flatten()], [_(lookahead_set).flatten()]) * 10);
+        if (nLowestScore == null || nScore <= nLowestScore) {
+          if (nScore == nLowestScore && !_(lookahead_best_sets).include(set))
+            lookahead_best_sets.push(set);
+          else
+            lookahead_best_sets = [set];
+          nLowestScore = nScore;
+        }
+      }
+      nCompletedSets++;
+      if (nCompletedSets == nSets)
+        callback(lookahead_best_sets);
+    }.bind(null, set));
+  }
+}
+
+/*
+ScoreSet(aSet[, aSet2])
+
+Calculates scores of one (or possibly a sequence of sequential sets)
+by temporarily making it seem as though the teams all played each-other,
+adding up the score, and then decrementing to return the teams to their original
+state.
+
+TODO: wouldn't it be simpler to just clone the teams & increment the clones?
+
+*/
+function ScoreSet(aSet, aSet2) {
+  var nScore = 0;
+  
+  // simulate placing 9 teams in 9 sites
+  var nRounds = aSet.length;
+  for(var nRound = 0; nRound < nRounds; ++nRound) {
+    var combo = aSet[nRound];
+    IncrementTimesPlayed3(g_aTeams[combo[0]], g_aTeams[combo[1]], g_aTeams[combo[2]]);
+    IncrementTimesPlayed3(g_aTeams[combo[3]], g_aTeams[combo[4]], g_aTeams[combo[5]]);
+    IncrementTimesPlayed3(g_aTeams[combo[6]], g_aTeams[combo[7]], g_aTeams[combo[8]]);
+    
+    if (combo.length == 10)
+      g_aTeams[combo[9]].nByes += 1;
+  }
+  
+  // if there's only 1 set, add up the score
+  // else if there's a 2nd set, recurse & take *that* score
+  if (!aSet2) {
+    var nTeams = g_aTeams.length;
+    for (var nTeam = 0; nTeam < nTeams; ++nTeam) {
+      var team;
+      if (team = g_aTeams[nTeam])
+        nScore += TeamScore(team);
+    }
+    // we have to round b/c (unbelievably) there are random differences with
+    // scores like 28.8000000000005 & 28.8 and we want them treated the same
+    nScore = Math.round(nScore * 10)
+  }
+  else {
+    nScore = ScoreSet(aSet2);
+  }
+  
+  // simulate placing 9 teams in 9 sites
+  var nRounds = aSet.length;
+  for(var nRound = 0; nRound < nRounds; ++nRound) {
+    var combo = aSet[nRound];
+    DecrementTimesPlayed3(g_aTeams[combo[0]], g_aTeams[combo[1]], g_aTeams[combo[2]]);
+    DecrementTimesPlayed3(g_aTeams[combo[3]], g_aTeams[combo[4]], g_aTeams[combo[5]]);
+    DecrementTimesPlayed3(g_aTeams[combo[6]], g_aTeams[combo[7]], g_aTeams[combo[8]]);
+    
+    if (combo.length == 10)
+      g_aTeams[combo[9]].nByes -= 1;
+  }
+  
+  return nScore;
+}
+
+// Third version (sum of deviations from the mean)
+function TeamScore(team) {
+  var nSum = 0;
+  var nDeviations = 0;
+  for(var nTeam = 0; nTeam < g_nTeams; ++nTeam)
+    nSum += team.timesPlayedTeam[nTeam];
+  var nMean = nSum / g_nTeams;
+  for(var nTeam = 0; nTeam < g_nTeams; ++nTeam)
+    nDeviations += Math.abs(nMean - team.timesPlayedTeam[nTeam])
+  
+  // severely penalize any combo that gives a single team multiple byes
+  nDeviations += 10000 * (team.nByes * team.nByes - 1);
+
+  return nDeviations;
+}
+
+function IncrementTimesPlayed3(team1, team2, team3)
+{
+  //IncrementTimesPlayed(team1, team2);
+  ++team2.timesPlayedTeam[team1.nTeam];
+  ++team1.timesPlayedTeam[team2.nTeam];
+  
+  //IncrementTimesPlayed(team2, team3);
+  ++team3.timesPlayedTeam[team2.nTeam];
+  ++team2.timesPlayedTeam[team3.nTeam];
+  
+  //IncrementTimesPlayed(team1, team3);
+  ++team3.timesPlayedTeam[team1.nTeam];
+  ++team1.timesPlayedTeam[team3.nTeam];
+}
+
+function DecrementTimesPlayed3(team1, team2, team3)
+{
+  //IncrementTimesPlayed(team1, team2);
+  --team2.timesPlayedTeam[team1.nTeam];
+  --team1.timesPlayedTeam[team2.nTeam];
+  
+  //IncrementTimesPlayed(team2, team3);
+  --team3.timesPlayedTeam[team2.nTeam];
+  --team2.timesPlayedTeam[team3.nTeam];
+  
+  //IncrementTimesPlayed(team1, team3);
+  --team3.timesPlayedTeam[team1.nTeam];
+  --team1.timesPlayedTeam[team3.nTeam];
+}
+
+function chooseRandomItem(array, remove) {
+  var num_items = array.length;
+  var random_item_num = Math.floor(Math.random() * num_items);
+  var item = array[random_item_num];
+  array.splice(random_item_num, 1);
+  return item;
+}
+
+function chooseRandomItems(array, num_items) {
+  array = array.slice(); // clone
+  var random_items = [];
+  while (random_items.length < num_items)
+    random_items.push(chooseRandomItem(array, true));
+  return random_items;
 }
 
 function trySiteCombos(combos, nCumulativeScore, prev_sites) {  
