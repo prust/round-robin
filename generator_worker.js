@@ -1,15 +1,26 @@
-importScripts('underscore-1.1.4.js');
+(function(root) {
 
-onmessage = function(event) {
-  this.g_lastRoundSite = event.data.g_lastRoundSite;
-  this.g_aTeams = event.data.g_aTeams;
-  this.g_two_team_site = event.data.g_two_team_site
-  this.g_current_combo_num = event.data.g_current_combo_num;
-  this.g_nTeams = event.data.g_nTeams;
-  this.g_nSites = event.data.g_nSites;
-  this.g_best_sets = [];
-  this.g_lowest_score = -1;
-  this.g_aCombos = event.data.combos;
+if (root.importScripts)
+  importScripts('underscore-1.1.4.js');
+
+var g_best_sets = [];
+var g_lowest_score = -1;
+var g_lastRoundSite, g_aTeams, g_two_team_site, g_current_combo_num, g_nTeams, g_nSites, g_aCombos;
+
+root.onmessage = function(event) {
+  root.genRound(event.data);
+};
+
+// the round-robin generation engine can be called directly
+// via genRound() or as a web-worker w/ message posting
+root.genRound = function genRound(data, callback) {
+  g_lastRoundSite = data.g_lastRoundSite;
+  g_aTeams = data.g_aTeams;
+  g_two_team_site = data.g_two_team_site;
+  g_current_combo_num = data.g_current_combo_num;
+  g_nTeams = data.g_nTeams;
+  g_nSites = data.g_nSites;
+  g_aCombos = data.combos;
   
   genBestSets(null, function(best_sets) {
     // instead of just picking one at random, we clear out the data & start
@@ -18,9 +29,12 @@ onmessage = function(event) {
     
     pickByLookahead(best_sets, function(best_sets) {
       var best_set = chooseRandomItem(best_sets);
-      postMessage({ best_set: best_set });
-    });
-  });
+      (callback || root.postMessage)({
+        'best_set': best_set,
+        'teams': g_aTeams
+      });
+    }.bind(this));
+  }.bind(this));
 }
 
 function genBestSets(set_to_apply, callback) {
@@ -424,3 +438,5 @@ function getTimes()
 	timers = {};
 	return astrTimes.join("\n");
 }
+
+})(this);

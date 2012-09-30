@@ -49,26 +49,7 @@ $(function() {
       // but is editable & saved via localStorage for subsequent runs
       // and the software could deal graciously with teams being added/deleted
 
-      try {
-        var worker = new Worker('generator_worker.js');
-      }
-      catch(ex) {
-        alert("Unable to create worker thread, verify that you are not on a file:// protocol.")
-        return;
-      }
-      worker.onmessage = function(event) {
-        var best_set = event.data.best_set;
-        Assert(best_set, 'no best_set returned');
-        
-        this.rounds.create({'set': best_set, 'meet_id': this.id});
-        ApplySet(best_set);
-      }.bind(this);
-      worker.onerror = function(error) {
-        alert('There was an error:');
-        alert(error.message);
-      };
-      // trySiteCombos();
-      worker.postMessage({
+      var data = {
         combos: g_aCombos,
         nCumulativeScore: 0,
         prev_sites: [],
@@ -80,7 +61,36 @@ $(function() {
         g_num_rounds: 1,
         g_nSites: g_nSites,
         set_to_apply: null
-      });
+      };
+
+      if (window.genRound) {
+        genRound(data, this.applyNewSet.bind(this));
+      }
+      else {
+        try {
+          var worker = new Worker('generator_worker.js?cache_buster=' + Math.random());
+        }
+        catch(ex) {
+          alert("Unable to create worker thread, verify that you are not on a file:// protocol.")
+          return;
+        }
+        worker.onmessage = function(event) {
+          this.applyNewSet(event.data);
+        }.bind(this);
+        worker.onerror = function(error) {
+          alert('There was an error:');
+          alert(error.message);
+        };
+        worker.postMessage(data);
+      }      
+    },
+    applyNewSet: function(data) {
+      var best_set = data.best_set;
+      g_aTeams = data.teams;
+      Assert(best_set, 'no best_set returned');
+      
+      this.rounds.create({'set': best_set, 'meet_id': this.id});
+      ApplySet(best_set);
     },
     clear: function() {
       this.destroy();
