@@ -49,7 +49,13 @@ $(function() {
       // but is editable & saved via localStorage for subsequent runs
       // and the software could deal graciously with teams being added/deleted
 
-      var worker = new Worker('generator_worker.js');
+      try {
+        var worker = new Worker('generator_worker.js');
+      }
+      catch(ex) {
+        alert("Unable to create worker thread, verify that you are not on a file:// protocol.")
+        return;
+      }
       worker.onmessage = function(event) {
         var best_set = event.data.best_set;
         Assert(best_set, 'no best_set returned');
