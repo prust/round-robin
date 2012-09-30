@@ -165,6 +165,17 @@ function SetToString(set) {
 	return astr.join("\n");
 }
 
+// Creates all possible site combinations
+// in nested arrays to minimize duplication
+// For instance:
+// [0, 1, 2, [
+//   [3, 4, 5, [
+//      [6, 7, 8, [9]],
+//      [6, 7, 9, [8]],
+//      [6, 8, 9, [7]],
+//      [7, 8, 9, [6]]],
+//   [3, 4, 6, [
+//      [ ...
 function CreateAllCombos(team_numbers) {
   g_aCombos = [];
 	AddToCombo([], team_numbers, g_aCombos);
@@ -173,7 +184,7 @@ function CreateAllCombos(team_numbers) {
 function AddToCombo(aTeamsUsed, aTeamsLeft, combos) {
   // loop through aTeamsLeft until we find one that works
 	var nTeams = aTeamsLeft.length;
-	for(var nTeam = 0; nTeam < nTeams; ++nTeam) {
+	for (var nTeam = 0; nTeam < nTeams; ++nTeam) {
 		var team = aTeamsLeft[nTeam];
 		
 		// force ascending order within a triad to eliminate duplicates
