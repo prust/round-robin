@@ -5,7 +5,7 @@ if (root.importScripts)
 
 var g_best_sets = [];
 var g_lowest_score = -1;
-var g_lastRoundSite, g_aTeams, g_two_team_site, g_current_combo_num, g_nTeams, g_nSites, g_aCombos;
+var g_aTeams, g_two_team_site, g_current_combo_num, g_nTeams, g_nSites, g_aCombos;
 
 root.onmessage = function(event) {
   root.genRound(event.data);
@@ -14,7 +14,6 @@ root.onmessage = function(event) {
 // the round-robin generation engine can be called directly
 // via genRound() or as a web-worker w/ message posting
 root.genRound = function genRound(data, callback) {
-  g_lastRoundSite = data.g_lastRoundSite;
   g_aTeams = data.g_aTeams;
   g_two_team_site = data.g_two_team_site;
   g_current_combo_num = data.g_current_combo_num;
@@ -22,55 +21,50 @@ root.genRound = function genRound(data, callback) {
   g_nSites = data.g_nSites;
   g_aCombos = data.combos;
   
-  genBestSets(null, function(best_sets) {
-    // instead of just picking one at random, we clear out the data & start
-    // over with JUST THIS MEET, so we also have a well-balanced meet
-    //var balancedSets = pickBalancedSets(best_sets, team_names);
-    
-    pickByLookahead(best_sets, function(best_sets) {
-      var best_set = chooseRandomItem(best_sets);
-      (callback || root.postMessage)({
-        'best_set': best_set,
-        'teams': g_aTeams
-      });
-    }.bind(this));
-  }.bind(this));
+  var best_sets = genBestSets(null);
+  // instead of just picking one at random, we clear out the data & start
+  // over with JUST THIS MEET, so we also have a well-balanced meet
+  //var balancedSets = pickBalancedSets(best_sets, team_names);
+  
+  best_sets = pickByLookahead(best_sets);
+  
+  var best_set = chooseRandomItem(best_sets);
+  (callback || root.postMessage)({
+    'best_set': best_set,
+    'teams': g_aTeams
+  });
 }
 
-function genBestSets(set_to_apply, callback) {
+function genBestSets(set_to_apply) {
   if (set_to_apply)
     ApplySetNew(set_to_apply);
   trySiteCombos(g_aCombos, 0, []);
-  callback(g_best_sets);
+  return g_best_sets;
 }
 
-function pickByLookahead(sets, callback) {
+function pickByLookahead(sets) {
   var lookahead_best_sets = [];
-  var nCompletedSets = 0;
   var nLowestScore = null;
   if (sets.length > 100)
     sets = chooseRandomItems(sets, 90);
   var nSets = sets.length;
   for (var nSet = 0; nSet < nSets; ++nSet) {
     var set = sets[nSet];
-    genBestSets(set, function(set, lookahead_sets) {
-      var nLSets = lookahead_sets.length;
-      for (var nLSet = 0; nLSet < nLSets; ++nLSet) {
-        var lookahead_set = lookahead_sets[nLSet];
-        var nScore = Math.round(ScoreSet([_(set).flatten()], [_(lookahead_set).flatten()]) * 10);
-        if (nLowestScore == null || nScore <= nLowestScore) {
-          if (nScore == nLowestScore && !_(lookahead_best_sets).include(set))
-            lookahead_best_sets.push(set);
-          else
-            lookahead_best_sets = [set];
-          nLowestScore = nScore;
-        }
+    var lookahead_sets = genBestSets(set);
+    var nLSets = lookahead_sets.length;
+    for (var nLSet = 0; nLSet < nLSets; ++nLSet) {
+      var lookahead_set = lookahead_sets[nLSet];
+      var nScore = Math.round(ScoreSet([_(set).flatten()], [_(lookahead_set).flatten()]) * 10);
+      if (nLowestScore == null || nScore <= nLowestScore) {
+        if (nScore == nLowestScore && !_(lookahead_best_sets).include(set))
+          lookahead_best_sets.push(set);
+        else
+          lookahead_best_sets = [set];
+        nLowestScore = nScore;
       }
-      nCompletedSets++;
-      if (nCompletedSets == nSets)
-        callback(lookahead_best_sets);
-    }.bind(null, set));
+    }
   }
+  return lookahead_best_sets;
 }
 
 /*
@@ -196,8 +190,6 @@ function chooseRandomItems(array, num_items) {
 function trySiteCombos(combos, nCumulativeScore, prev_sites) {  
   // all the sites we've done so far, including this one
   var nSitesDone = prev_sites.length + 1;
-  var last_round = nSitesDone > g_lastRoundSite;
-  var prep_for_last_round = nSitesDone == g_lastRoundSite;
     
   var nCombos = combos.length;
   for (var nCombo = 0; nCombo < nCombos; ++nCombo) {
@@ -215,64 +207,28 @@ function trySiteCombos(combos, nCumulativeScore, prev_sites) {
     var team2_nTeam = team2 ? team2.nTeam : -1;
     var team3_nTeam = team3 ? team3.nTeam : -1;
     stopTime('setup teams');
-    
-    if (!last_round) {
-      startTime('increment');
-      // increment everything
-      if (team2) {
-        ++team1.timesPlayedTeam[team2_nTeam];
-        ++team2.timesPlayedTeam[team1_nTeam];
-    	  if (team3) {
-    	    ++team1.timesPlayedTeam[team3_nTeam];
-    	    ++team2.timesPlayedTeam[team3_nTeam];
-    	    ++team3.timesPlayedTeam[team1_nTeam];
-    	    ++team3.timesPlayedTeam[team2_nTeam];
-    	  }
-    	}
-    	else {
-    	  ++team1.nByes;
-    	}
-			
-			if (nSitesDone === g_two_team_site) {
-				++team1.nTwoTeamSite;
-				++team2.nTwoTeamSite;
-			}
-    	stopTime('increment');
-    
-      // calculate score of each team
-      if (prep_for_last_round) {
-        ++g_current_combo_num;
-        startTime('calc score all');
-        for (var nTeam = 0; nTeam < g_nTeams; ++nTeam) {
-          new_score += TeamScore5(g_aTeams[nTeam]);
-        }
-        stopTime('calc score all');
-      }
-    }
-    
-    if (last_round) {
-      if (team2) {
-        new_score += (TeamScoreDiff(team1.timesPlayedTeam[team2_nTeam]) * 2);
-    	  if (team3) {
-    	    new_score += (TeamScoreDiff(team1.timesPlayedTeam[team3_nTeam]) * 2);
-    	    new_score += (TeamScoreDiff(team2.timesPlayedTeam[team3_nTeam]) * 2);
-    	  }
-    	}
-    	else {
-    	  // penalize teams with more than 1 bye
-				// TODO: this doesn't take into account a situation where there is more than 1 bye
-				// to tackle that, we'd have to rewrite it to be like the nTwoTeamSite penalty
-				// with squares instead of a static number
-    	  if (team1.nByes) {
-    	    new_score += 10000;
-    	  }
-    	}
-			if (nSitesDone === g_two_team_site) {
-				var score_before = new_score;
-				new_score += 1000000 * ((team1.nTwoTeamSite+1) * ((team1.nTwoTeamSite+1)));
-				new_score += 1000000 * ((team2.nTwoTeamSite+1) * ((team2.nTwoTeamSite+1)));
-			}
-    }
+       
+    if (team2) {
+      new_score += (TeamScoreDiff(team1.timesPlayedTeam[team2_nTeam]) * 2);
+  	  if (team3) {
+  	    new_score += (TeamScoreDiff(team1.timesPlayedTeam[team3_nTeam]) * 2);
+  	    new_score += (TeamScoreDiff(team2.timesPlayedTeam[team3_nTeam]) * 2);
+  	  }
+  	}
+  	else {
+  	  // penalize teams with more than 1 bye
+			// TODO: this doesn't take into account a situation where there is more than 1 bye
+			// to tackle that, we'd have to rewrite it to be like the nTwoTeamSite penalty
+			// with squares instead of a static number
+  	  if (team1.nByes) {
+  	    new_score += 10000;
+  	  }
+  	}
+		if (nSitesDone === g_two_team_site) {
+			var score_before = new_score;
+			new_score += 1000000 * ((team1.nTwoTeamSite+1) * ((team1.nTwoTeamSite+1)));
+			new_score += 1000000 * ((team2.nTwoTeamSite+1) * ((team2.nTwoTeamSite+1)));
+		}
 
     // recurse if there are nested combinations
     var nested_combo = combo.length >= 4 ? combo[3] : null;
@@ -290,19 +246,8 @@ function trySiteCombos(combos, nCumulativeScore, prev_sites) {
       }
     }
     
-    // if we just finished a round, start over w/ g_aCombos for the next
-    if (!last_round && nSitesDone % g_nSites == 0) {
-      startTime('starting over');
-      //if (prev_sites[2] == 7 && prev_sites[1] == 5 && prev_sites[0] == 0)
-      //  logDebug('[0, 5, 7] - ' + new_score);
-      var new_prev_sites = [].concat(prev_sites);
-			new_prev_sites.push(combo.slice(0, 3));
-			stopTime('starting over');
-			trySiteCombos(g_aCombos, new_score, new_prev_sites);
-    }
-    
     // if we're at a leaf-node, possibly add to list of best scores
-    if (last_round && (nSitesDone == g_nSites)) {
+    if (nSitesDone == g_nSites) {
       startTime('leaf-node / scoring');
       if (g_lowest_score == -1 || new_score <= g_lowest_score) {
         var set = [].concat(prev_sites);
@@ -317,29 +262,6 @@ function trySiteCombos(combos, nCumulativeScore, prev_sites) {
         }
       }
       stopTime('leaf-node / scoring');
-    }
-    
-    // decrement everything 
-    if (!last_round) {
-      startTime('decrement');
-      if (team2) {
-        --team1.timesPlayedTeam[team2_nTeam];
-        --team2.timesPlayedTeam[team1_nTeam];
-        if (team3) {
-    	    --team1.timesPlayedTeam[team3_nTeam];
-    	    --team2.timesPlayedTeam[team3_nTeam];
-    	    --team3.timesPlayedTeam[team1_nTeam];
-    	    --team3.timesPlayedTeam[team2_nTeam];
-    	  }
-    	}
-    	else {
-    	  --team1.nByes;
-    	}
-			if (nSitesDone === g_two_team_site) {
-				--team1.nTwoTeamSite;
-				--team2.nTwoTeamSite;
-			}
-  	  stopTime('decrement');
     }
   }
 }

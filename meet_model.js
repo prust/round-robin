@@ -53,7 +53,6 @@ $(function() {
         combos: g_aCombos,
         nCumulativeScore: 0,
         prev_sites: [],
-        g_lastRoundSite: 0,
         g_aTeams: g_aTeams,
         g_two_team_site: g_two_team_site,
         g_current_combo_num: g_current_combo_num,
