@@ -3,9 +3,7 @@
 if (root.importScripts)
   importScripts('underscore-1.1.4.js');
 
-var g_best_sets = [];
-var g_lowest_score = -1;
-var g_aTeams, g_two_team_site, g_current_combo_num, g_nTeams, g_nSites, g_aCombos;
+var teams, g_lowest_score, g_best_sets, g_two_team_site, g_current_combo_num, g_nTeams, g_nSites, g_aCombos;
 
 root.onmessage = function(event) {
   root.genRound(event.data);
@@ -14,24 +12,21 @@ root.onmessage = function(event) {
 // the round-robin generation engine can be called directly
 // via genRound() or as a web-worker w/ message posting
 root.genRound = function genRound(data, callback) {
-  g_aTeams = data.g_aTeams;
+  teams = deepClone(data.g_aTeams);
   g_two_team_site = data.g_two_team_site;
   g_current_combo_num = data.g_current_combo_num;
   g_nTeams = data.g_nTeams;
   g_nSites = data.g_nSites;
   g_aCombos = data.combos;
+  g_best_sets = [];
+  g_lowest_score = -1;
   
   var best_sets = genBestSets(null);
-  // instead of just picking one at random, we clear out the data & start
-  // over with JUST THIS MEET, so we also have a well-balanced meet
-  //var balancedSets = pickBalancedSets(best_sets, team_names);
-  
   best_sets = pickByLookahead(best_sets);
   
   var best_set = chooseRandomItem(best_sets);
   (callback || root.postMessage)({
-    'best_set': best_set,
-    'teams': g_aTeams
+    'best_set': best_set
   });
 }
 
@@ -85,21 +80,21 @@ function ScoreSet(aSet, aSet2) {
   var nRounds = aSet.length;
   for(var nRound = 0; nRound < nRounds; ++nRound) {
     var combo = aSet[nRound];
-    IncrementTimesPlayed3(g_aTeams[combo[0]], g_aTeams[combo[1]], g_aTeams[combo[2]]);
-    IncrementTimesPlayed3(g_aTeams[combo[3]], g_aTeams[combo[4]], g_aTeams[combo[5]]);
-    IncrementTimesPlayed3(g_aTeams[combo[6]], g_aTeams[combo[7]], g_aTeams[combo[8]]);
+    IncrementTimesPlayed3(teams[combo[0]], teams[combo[1]], teams[combo[2]]);
+    IncrementTimesPlayed3(teams[combo[3]], teams[combo[4]], teams[combo[5]]);
+    IncrementTimesPlayed3(teams[combo[6]], teams[combo[7]], teams[combo[8]]);
     
     if (combo.length == 10)
-      g_aTeams[combo[9]].nByes += 1;
+      teams[combo[9]].nByes += 1;
   }
   
   // if there's only 1 set, add up the score
   // else if there's a 2nd set, recurse & take *that* score
   if (!aSet2) {
-    var nTeams = g_aTeams.length;
+    var nTeams = teams.length;
     for (var nTeam = 0; nTeam < nTeams; ++nTeam) {
       var team;
-      if (team = g_aTeams[nTeam])
+      if (team = teams[nTeam])
         nScore += TeamScore(team);
     }
     // we have to round b/c (unbelievably) there are random differences with
@@ -114,12 +109,12 @@ function ScoreSet(aSet, aSet2) {
   var nRounds = aSet.length;
   for(var nRound = 0; nRound < nRounds; ++nRound) {
     var combo = aSet[nRound];
-    DecrementTimesPlayed3(g_aTeams[combo[0]], g_aTeams[combo[1]], g_aTeams[combo[2]]);
-    DecrementTimesPlayed3(g_aTeams[combo[3]], g_aTeams[combo[4]], g_aTeams[combo[5]]);
-    DecrementTimesPlayed3(g_aTeams[combo[6]], g_aTeams[combo[7]], g_aTeams[combo[8]]);
+    DecrementTimesPlayed3(teams[combo[0]], teams[combo[1]], teams[combo[2]]);
+    DecrementTimesPlayed3(teams[combo[3]], teams[combo[4]], teams[combo[5]]);
+    DecrementTimesPlayed3(teams[combo[6]], teams[combo[7]], teams[combo[8]]);
     
     if (combo.length == 10)
-      g_aTeams[combo[9]].nByes -= 1;
+      teams[combo[9]].nByes -= 1;
   }
   
   return nScore;
@@ -198,9 +193,9 @@ function trySiteCombos(combos, nCumulativeScore, prev_sites) {
     // setup teams
     startTime('setup teams');
     var nTeams = combo.length;
-    var team1 = g_aTeams[combo[0]];
-    var team2 = nTeams > 1 ? g_aTeams[combo[1]] : null;
-    var team3 = nTeams > 2 ? g_aTeams[combo[2]] : null;
+    var team1 = teams[combo[0]];
+    var team2 = nTeams > 1 ? teams[combo[1]] : null;
+    var team3 = nTeams > 2 ? teams[combo[2]] : null;
     
     // setup team #s
     var team1_nTeam = team1.nTeam;
@@ -231,7 +226,7 @@ function trySiteCombos(combos, nCumulativeScore, prev_sites) {
 		}
 
     // recurse if there are nested combinations
-    var nested_combo = combo.length >= 4 ? combo[3] : null;
+    var nested_combo = getNestedCombos(combo);
     if (nested_combo && nested_combo.length) {
       // every single [..., [0, 5, 7] is too high to recurse, why are their scores in the 400s?
       //if (g_lowest_score != -1 && prev_sites.length == 6 && prev_sites[0][2] == 7 && prev_sites[0][1] == 5 && prev_sites[0][0] == 0)
@@ -247,7 +242,7 @@ function trySiteCombos(combos, nCumulativeScore, prev_sites) {
     }
     
     // if we're at a leaf-node, possibly add to list of best scores
-    if (nSitesDone == g_nSites) {
+    if (isLeafNode(combo)) {
       startTime('leaf-node / scoring');
       if (g_lowest_score == -1 || new_score <= g_lowest_score) {
         var set = [].concat(prev_sites);
@@ -264,6 +259,15 @@ function trySiteCombos(combos, nCumulativeScore, prev_sites) {
       stopTime('leaf-node / scoring');
     }
   }
+}
+
+function getNestedCombos(combo) {
+  return combo[3];
+}
+// the previous check we were doing, nSitesDone == g_nSites
+// wasn't accurate when there are 10 teams, due to the lack of a "bye" site
+function isLeafNode(combo) {
+  return !getNestedCombos(combo);
 }
 
 // 5th version based on just squaring the # of times played
@@ -299,9 +303,9 @@ function ApplySetNew(set) {
 		// and pass in "+1" or "-1" for increment and decrement?
 		// setup teams
     var nTeams = combo.length;
-    var team1 = g_aTeams[combo[0]];
-    var team2 = nTeams > 1 ? g_aTeams[combo[1]] : null;
-    var team3 = nTeams > 2 ? g_aTeams[combo[2]] : null;
+    var team1 = teams[combo[0]];
+    var team2 = nTeams > 1 ? teams[combo[1]] : null;
+    var team3 = nTeams > 2 ? teams[combo[2]] : null;
     
     // setup team #s
     var team1_nTeam = team1.nTeam;
@@ -328,6 +332,10 @@ function ApplySetNew(set) {
 			++team2.nTwoTeamSite;
 		}
 	}
+}
+
+function deepClone(obj) {
+  return JSON.parse(JSON.stringify(obj));
 }
 
 

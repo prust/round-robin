@@ -1,7 +1,7 @@
 $(function() {
   window.Round = Backbone.Model.extend({
     initialize: function() {
-      
+      ApplySet(this.get('set'));
     },
     clear: function() {
       this.destroy();
@@ -85,11 +85,9 @@ $(function() {
     },
     applyNewSet: function(data) {
       var best_set = data.best_set;
-      g_aTeams = data.teams;
       Assert(best_set, 'no best_set returned');
       
       this.rounds.create({'set': best_set, 'meet_id': this.id});
-      ApplySet(best_set);
     },
     clear: function() {
       this.destroy();
