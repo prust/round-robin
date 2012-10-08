@@ -1,46 +1,130 @@
 $(function() {
   window.MeetView = Backbone.View.extend({
-    tagName: 'div',
-    events: {
+
+    'tagName': 'div',
+    'events': {
       'click #generate': 'generateRoundRobin',
-      'click #cancel': 'cancel'
     },
-    initialize: function() {
+
+    'initialize': function initialize() {
       _.bindAll(this, 'render');
       this.model.rounds.bind('add', this.render);
       this.model.bind('add', this.render);
       this.model.view = this;
+      this.teams = g_aTeams;
     },
-    render: function() {
-      var html =
-		    '<input id="generate" type="button" value="Generate" />' + 
-		    '<span id="progress">&nbsp;</span>' + 
-		    '<input id="cancel" type="button" value="Cancel" /><br />' + 
-		    '<textarea id="schedule" rows="50" cols="150">';
-		  var final_sets = this.model.rounds.pluck('set');
-		  var results = [];
-  	  results = results.concat(_(final_sets).map(JSON.stringify));
-    	results.push('\n');
-    	var nRound = 1;
-    	results = results.concat(_(final_sets).map(function(set) {
-    	  return 'Round ' + (nRound++) + '\n' + SetToString(set);
-    	}));
-    	results.push('\n');
-    	results.push(CompetitionReport(g_aTeams));
-    	results.push('\n');
-    	results.push(TwoTeamSiteReport(g_aTeams));
-    	results.push('\n');
-    	results.push(ByeReport(g_aTeams));
-    	results.push('\n');
-  	  html += results.join('\n');
-		  html += '</textarea>';
-		  $(this.el).html(html);
-		  return this;
+
+    'render': function render() {
+      $(this.el).empty();
+      this.renderGenerateBtn();
+      this.renderRoundRobin();
+      this.renderCompetitionReport();
+      this.renderTwoTeamSiteReport();
+      this.renderByeReport();
+      return this;
     },
-    cancel: function() {
-      this.model.cancel();
+
+    'renderGenerateBtn': function renderGenerateBtn() {
+      this.append($('<input id="generate" type="button" value="Add Round" />'));
     },
-    generateRoundRobin: function() {
+
+    'renderRoundRobin': function renderRoundRobin() {
+      this.renderHeader('Round-Robin Schedule');
+
+      var round_nums = _.range(1, this.model.rounds.length + 1);
+      var col_headings = round_nums.map(function(round) { return 'Round ' + round; });
+
+      var rows = [];
+      var blank_row = [];
+      _.range(g_nSites).forEach(function(site_num) {
+        _.range(3).forEach(function(team_position) {
+          rows.push(this.model.rounds.pluck('set').map(function(sites) {
+            var team_num = sites[site_num][team_position];
+            if (team_num == null)
+              return '';
+            else
+              return GetTeamByNum(team_num).team;
+          }.bind(this)));
+        }.bind(this));
+        rows.push(blank_row);
+      }.bind(this));
+
+      this.renderTable(col_headings, rows);
+    },
+
+    'renderCompetitionReport': function renderCompetitionReport() {
+      this.renderHeader('Competition Matrix');
+      this.renderReport([''].concat(_(this.teams).pluck('team')), function(team) {
+        return [team.team].concat(team.timesPlayedTeam);
+      });
+    },
+
+    'renderTwoTeamSiteReport': function renderTwoTeamSiteReport() {
+      if (!this.anyTeamsInTwoTeamSite())
+        return;
+
+      this.renderHeader('Number of times in a 2-team site');
+      this.renderReport(['Team', '# times in 2-team site'], function(team) {
+        return [team.team, team.nTwoTeamSite];
+      });
+    },
+
+    'anyTeamsInTwoTeamSite': function anyTeamsInTwoTeamSite() {
+      return _(this.teams).any(function(team) {
+        return team.nTwoTeamSite;
+      });
+    },
+
+    'renderByeReport': function renderByeReport() {
+      if (!this.anyTeamsWithByes())
+        return;
+
+      this.renderHeader('Number of byes');
+      this.renderReport(['Team', '# byes'], function(team) {
+        return [team.team, team.nByes];
+      });
+    },
+
+    'anyTeamsWithByes': function anyTeamsWithByes() {
+      return _(this.teams).any(function(team) {
+        return team.nByes;
+      });
+    },
+
+    'renderReport': function renderReport(headers, row_generator) {
+      this.renderTable(headers, this.teams.map(row_generator));
+    },
+
+    'renderTable': function renderTable(headers, rows) {
+      var table = $('<table>');
+      var thead_row = $('<thead>').append($('<tr>'));
+      headers.forEach(function(header) {
+        thead_row.append($('<th>').text(header));
+      });
+      table.append(thead_row);
+      
+      var tbody = $('<tbody>');
+      rows.forEach(function(row) {
+        var tr = $('<tr>');
+        row.forEach(function(cell) {
+          tr.append($('<td>').text(cell));
+        });
+        tbody.append(tr);
+      });
+      table.append(tbody);
+
+      this.append(table);
+    },
+
+    'renderHeader': function renderHeader(header) {
+      this.append($('<h2>').text(header));
+    },
+
+    'append': function append(el) {
+      $(this.el).append(el);
+    },
+
+    'generateRoundRobin': function generateRoundRobin() {
       this.$('#generate').attr('disabled', 'disabled');
       this.model.generateRound();
     }

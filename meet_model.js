@@ -21,12 +21,8 @@ $(function() {
   
   window.Meet = Backbone.Model.extend({
     initialize: function(attributes) {
-      this.cancel = false;
       this.rounds = new Rounds(null, {'meet_id': attributes.id});
       this.rounds.fetch();
-    },
-    cancel: function() {
-      this.cancel = true;
     },
     generateRound: function() {
       // TODO: Run the competition reports in the app_view after generating or

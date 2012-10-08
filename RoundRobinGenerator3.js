@@ -143,28 +143,6 @@ function ApplySet(set) {
 	}
 }
 
-// randomize the position of the triads
-// and the position of each team within each triad
-function SetToString(set) {
-	var astr = [];
-	
-	// if last item has 1 team (bye) or 2 teams (2-team site) long, keep it at end
-	var last_item = set[set.length-1];
-	if (last_item.length < 3)
-	  set.splice(set.length-1, 1);
-	set.sort(randomOrder);
-	set.push(last_item);
-	
-	var nSites = set.length;
-	for (var nSite = 0; nSite < nSites; ++nSite) {
-		var combo = set[nSite].slice(0, 3);
-		combo.sort(randomOrder);
-		var combo_by_names = _(combo).chain().map(GetTeamByNum).pluck("team").value();
-		astr.push(combo_by_names.join("\n") + "\n");
-	}
-	return astr.join("\n");
-}
-
 // Creates all possible site combinations
 // in nested arrays to minimize duplication
 // For instance:
@@ -233,36 +211,6 @@ function GetTeamByNum(num_team_searched_for) {
   return g_aTeams[num_team_searched_for];
 }
 
-function CompetitionReport(teams) {
-	result = 'Competition:\n';
-	var nTeams = teams.length;
-	for (var nTeam = 0; nTeam < nTeams; ++nTeam) {
-	  var team = teams[nTeam];
-		result += team.team + '\t' + team.timesPlayedTeam.join('\t') + '\n';
-	}
-	return result;
-}
-
-function ByeReport(teams) {
-	result = 'Byes:\n';
-	var nTeams = teams.length;
-	for (var nTeam = 0; nTeam < nTeams; ++nTeam) {
-	  var team = teams[nTeam];
-		result += team.team + ': ' + team.nByes + '\n';
-	}
-	return result;
-}
-
-function TwoTeamSiteReport(teams) {
-	result = 'Times in a Two-Team Site:\n';
-	var nTeams = teams.length;
-	for (var nTeam = 0; nTeam < nTeams; ++nTeam) {
-	  var team = teams[nTeam];
-		result += team.team + ': ' + team.nTwoTeamSite + '\n';
-	}
-	return result;
-}
-
 // emulates all of Python's List slice functionality (with the "list[]" notation)
 // http://docs.python.org/library/stdtypes.html#sequence-types-str-unicode-list-tuple-buffer-xrange
 Array.prototype.slice = function(start, stop, step) {
@@ -288,8 +236,4 @@ Array.prototype.slice = function(start, stop, step) {
     result.push(this[index]);
 
   return result;
-}
-
-function randomOrder() {
-  return Math.round(Math.random()) - 0.5;
 }

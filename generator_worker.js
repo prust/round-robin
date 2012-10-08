@@ -1,7 +1,7 @@
 (function(root) {
 
 if (root.importScripts)
-  importScripts('underscore-1.1.4.js');
+  importScripts('underscore.js');
 
 var teams, g_lowest_score, g_best_sets, g_two_team_site, g_current_combo_num, g_nTeams, g_nSites, g_aCombos;
 
@@ -25,9 +25,26 @@ root.genRound = function genRound(data, callback) {
   best_sets = pickByLookahead(best_sets);
   
   var best_set = chooseRandomItem(best_sets);
+  best_set = randomizePositions(best_set);
   (callback || root.postMessage)({
     'best_set': best_set
   });
+}
+
+function randomizePositions(best_set) {
+  // if last item has 1 team (bye) or 2 teams (2-team site) long, keep it at end
+  var last_item = best_set[best_set.length-1];
+  var is_bye_or_two_team = last_item.length < 3;
+  if (is_bye_or_two_team)
+    best_set.splice(best_set.length-1, 1);
+  
+  best_set = _.shuffle(best_set.map(function(triad) {
+    return _.shuffle(triad);
+  }));
+
+  if (is_bye_or_two_team)
+    best_set.push(last_item);
+  return best_set;
 }
 
 function genBestSets(set_to_apply) {
