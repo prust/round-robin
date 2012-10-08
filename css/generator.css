@@ -1,0 +1,17 @@
+body {
+  margin: 20px;
+}
+table {
+  width: auto !important
+}
+.round-robin td:empty {
+  background-color: #ddd;
+  height: 1px;
+}
+.competition td,
+.competition th {
+  min-width: 100px;
+}
+.competition .competing-self {
+  background-color: #ddd !important;
+}

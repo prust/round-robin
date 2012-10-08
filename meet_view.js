@@ -16,8 +16,8 @@ $(function() {
 
     'render': function render() {
       $(this.el).empty();
-      this.renderGenerateBtn();
       this.renderRoundRobin();
+      this.renderGenerateBtn();
       this.renderCompetitionReport();
       this.renderTwoTeamSiteReport();
       this.renderByeReport();
@@ -25,7 +25,7 @@ $(function() {
     },
 
     'renderGenerateBtn': function renderGenerateBtn() {
-      this.append($('<input id="generate" type="button" value="Add Round" />'));
+      this.append($('<a id="generate" class="btn"><i class="icon-plus"></i> Add Round</a>'));
     },
 
     'renderRoundRobin': function renderRoundRobin() {
@@ -35,27 +35,45 @@ $(function() {
       var col_headings = round_nums.map(function(round) { return 'Round ' + round; });
 
       var rows = [];
-      var blank_row = [];
-      _.range(g_nSites).forEach(function(site_num) {
+      var separator_row = [];
+      _(this.model.rounds.length).times(function() { separator_row.push(''); });
+
+      var sites = _.range(g_nSites);
+      sites.forEach(function(site_num) {
         _.range(3).forEach(function(team_position) {
-          rows.push(this.model.rounds.pluck('set').map(function(sites) {
-            var team_num = sites[site_num][team_position];
-            if (team_num == null)
-              return '';
-            else
-              return GetTeamByNum(team_num).team;
-          }.bind(this)));
+          if (this.positionIsPopulated(site_num, team_position))
+            rows.push(this.getTeamsForSiteAndPosition(site_num, team_position));
         }.bind(this));
-        rows.push(blank_row);
+
+        if (site_num != _(sites).last())
+          rows.push(separator_row);
+
       }.bind(this));
 
-      this.renderTable(col_headings, rows);
+      this.renderTable('round-robin', col_headings, rows);
+    },
+
+    'positionIsPopulated': function positionIsPopulated(site_num, team_position) {
+      return _(this.getTeamsForSiteAndPosition(site_num, team_position)).any(_.identity);
+    },
+
+    'getTeamsForSiteAndPosition': function getTeamsForSiteAndPosition(site_num, team_position) {
+      return this.model.rounds.pluck('set').map(function(sites) {
+        var team_num = sites[site_num][team_position];
+        if (team_num == null)
+          return '';
+        else
+          return GetTeamByNum(team_num).team;
+      }.bind(this));
     },
 
     'renderCompetitionReport': function renderCompetitionReport() {
       this.renderHeader('Competition Matrix');
-      this.renderReport([''].concat(_(this.teams).pluck('team')), function(team) {
+      this.renderReport('competition', [''].concat(_(this.teams).pluck('team')), function(team) {
         return [team.team].concat(team.timesPlayedTeam);
+      });
+      $(this.el).find('.competition tr').each(function(ix, tr) {
+        $($(tr).find('td')[ix]).addClass('competing-self').empty();
       });
     },
 
@@ -64,7 +82,7 @@ $(function() {
         return;
 
       this.renderHeader('Number of times in a 2-team site');
-      this.renderReport(['Team', '# times in 2-team site'], function(team) {
+      this.renderReport('two-teams', ['Team', '# times in 2-team site'], function(team) {
         return [team.team, team.nTwoTeamSite];
       });
     },
@@ -80,7 +98,7 @@ $(function() {
         return;
 
       this.renderHeader('Number of byes');
-      this.renderReport(['Team', '# byes'], function(team) {
+      this.renderReport('byes', ['Team', '# byes'], function(team) {
         return [team.team, team.nByes];
       });
     },
@@ -91,17 +109,17 @@ $(function() {
       });
     },
 
-    'renderReport': function renderReport(headers, row_generator) {
-      this.renderTable(headers, this.teams.map(row_generator));
+    'renderReport': function renderReport(classname, headers, row_generator) {
+      this.renderTable(classname, headers, this.teams.map(row_generator));
     },
 
-    'renderTable': function renderTable(headers, rows) {
-      var table = $('<table>');
-      var thead_row = $('<thead>').append($('<tr>'));
+    'renderTable': function renderTable(classname, headers, rows) {
+      var table = $('<table class="table table-striped table-bordered ' + classname + '">');
+      var thead_row = $('<tr>');
       headers.forEach(function(header) {
         thead_row.append($('<th>').text(header));
       });
-      table.append(thead_row);
+      table.append($('<thead>').append(thead_row));
       
       var tbody = $('<tbody>');
       rows.forEach(function(row) {
