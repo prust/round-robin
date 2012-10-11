@@ -37,10 +37,11 @@ $(function() {
       Meets.each(_.bind(this.addOne));
     },
     'clearData': function clearData() {
-      if (!confirm('Are you sure you want to delete all the data?'))
+      if (!confirm('Are you sure you want to delete all the meets and rounds?'))
         return;
 
-      localStorage.clear();
+      localStorage.removeItem('meets');
+      localStorage.removeItem('rounds');
       location.reload();
     }
   });
