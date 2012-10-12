@@ -99,10 +99,16 @@ function ScoreSet(aSet, aSet2) {
     var combo = aSet[nRound];
     IncrementTimesPlayed3(teams[combo[0]], teams[combo[1]], teams[combo[2]]);
     IncrementTimesPlayed3(teams[combo[3]], teams[combo[4]], teams[combo[5]]);
-    IncrementTimesPlayed3(teams[combo[6]], teams[combo[7]], teams[combo[8]]);
-    
-    if (combo.length == 10)
-      teams[combo[9]].nByes += 1;
+
+    if (combo.length == 7) {
+      teams[combo[6]].nByes += 1;
+    }
+    else {
+      IncrementTimesPlayed3(teams[combo[6]], teams[combo[7]], teams[combo[8]]);
+      
+      if (combo.length == 10)
+        teams[combo[9]].nByes += 1;
+    }
   }
   
   // if there's only 1 set, add up the score
@@ -128,10 +134,16 @@ function ScoreSet(aSet, aSet2) {
     var combo = aSet[nRound];
     DecrementTimesPlayed3(teams[combo[0]], teams[combo[1]], teams[combo[2]]);
     DecrementTimesPlayed3(teams[combo[3]], teams[combo[4]], teams[combo[5]]);
-    DecrementTimesPlayed3(teams[combo[6]], teams[combo[7]], teams[combo[8]]);
-    
-    if (combo.length == 10)
-      teams[combo[9]].nByes -= 1;
+
+    if (combo.length == 7) {
+      teams[combo[6]].nByes -= 1;
+    }
+    else {
+      DecrementTimesPlayed3(teams[combo[6]], teams[combo[7]], teams[combo[8]]);
+      
+      if (combo.length == 10)
+        teams[combo[9]].nByes -= 1;
+    }
   }
   
   return nScore;

@@ -45,10 +45,21 @@ function GlobalSetup(team_names, team_index_to_remove) {
 	  num_teams_playing--;
 	
 	// guard clauses (enforcing the limits of the program);
-	if (num_teams_playing < 8) throw new Error("Hey! You didn't enter enough teams. I haven't been programmed to generate a round-robin schedule with fewer than 9 teams.");
-	if (num_teams_playing > 12) throw new Error("Hey! You entered too many teams! I haven't been programmed to generate a round-robin schedule with more than 12 teams.");
+	var err_msg = '';
+	if (num_teams_playing < 7)
+		err_msg = "Error: The round-robin generator isn't programmed to generate a round-robin schedule with fewer than 7 teams."
+	if (num_teams_playing > 12)
+		err_msg = "Error: The round-robin generator isn't programmed to generate a round-robin schedule with more than 12 teams.";
+	if (err_msg) {
+		alert(err_msg);
+		throw new Error(err_msg);
+	}
 	
 	// TODO: encode these rules into optional preferences in the UI
+	if (num_teams_playing == 7) {
+		g_aSites = ["Site 1", "Site 2", "Bye"];
+		g_two_team_site = null;
+	}
 	if (num_teams_playing == 8) {
 		g_aSites = ["Site 1", "Site 2", "Site 3"];
 		g_two_team_site = 3;
@@ -171,7 +182,7 @@ function AddToCombo(aTeamsUsed, aTeamsLeft, combos) {
 			// force ascending order between triads to eliminate duplicate triads
 			// CAREFUL: only force ascending order between sites if the last site is full
 			// && (aTeamsUsed.length != 9 || team > aTeamsUsed[6])
-			if ((aTeamsUsed.length != 3 || team > aTeamsUsed[0]) && (aTeamsUsed.length != 6 || team > aTeamsUsed[3] || g_two_team_site == 3))
+			if ((aTeamsUsed.length != 3 || team > aTeamsUsed[0]) && (aTeamsUsed.length != 6 || team > aTeamsUsed[3] || g_two_team_site == 3 || g_aTeams.length == 7))
 			{
 				// clone and push this team on
 				var newTeamsUsed = [].concat(aTeamsUsed);
