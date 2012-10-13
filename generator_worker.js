@@ -51,6 +51,8 @@ function genBestSets(set_to_apply) {
   if (set_to_apply)
     ApplySetNew(set_to_apply);
   trySiteCombos(g_aCombos, 0, []);
+  if (set_to_apply)
+    UnApplySetNew(set_to_apply);
   return g_best_sets;
 }
 
@@ -68,10 +70,13 @@ function pickByLookahead(sets) {
       var lookahead_set = lookahead_sets[nLSet];
       var nScore = Math.round(ScoreSet([_(set).flatten()], [_(lookahead_set).flatten()]) * 10);
       if (nLowestScore == null || nScore <= nLowestScore) {
-        if (nScore == nLowestScore && !_(lookahead_best_sets).include(set))
-          lookahead_best_sets.push(set);
-        else
+        if (nScore == nLowestScore) {
+          if (!_(lookahead_best_sets).include(set))
+            lookahead_best_sets.push(set);
+        }
+        else {
           lookahead_best_sets = [set];
+        }
         nLowestScore = nScore;
       }
     }
@@ -361,6 +366,46 @@ function ApplySetNew(set) {
 			++team2.nTwoTeamSite;
 		}
 	}
+}
+
+function UnApplySetNew(set) {
+  var nSites = set.length;
+  for(var nSite = 0; nSite < nSites; ++nSite) {
+    var combo = set[nSite];
+    
+    // this is IDENTICAL to above, see if we can't make it a function?
+    // and pass in "+1" or "-1" for increment and decrement?
+    // setup teams
+    var nTeams = combo.length;
+    var team1 = teams[combo[0]];
+    var team2 = nTeams > 1 ? teams[combo[1]] : null;
+    var team3 = nTeams > 2 ? teams[combo[2]] : null;
+    
+    // setup team #s
+    var team1_nTeam = team1.nTeam;
+    var team2_nTeam = team2 ? team2.nTeam : -1;
+    var team3_nTeam = team3 ? team3.nTeam : -1;
+    
+    // increment everything
+    if (team2) {
+      --team1.timesPlayedTeam[team2_nTeam];
+      --team2.timesPlayedTeam[team1_nTeam];
+      if (team3) {
+        --team1.timesPlayedTeam[team3_nTeam];
+        --team2.timesPlayedTeam[team3_nTeam];
+        --team3.timesPlayedTeam[team1_nTeam];
+        --team3.timesPlayedTeam[team2_nTeam];
+      }
+    }
+    else {
+      --team1.nByes;
+    }
+    
+    if (nTeams == 2) {
+      --team1.nTwoTeamSite;
+      --team2.nTwoTeamSite;
+    }
+  }
 }
 
 function deepClone(obj) {
