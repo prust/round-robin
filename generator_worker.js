@@ -1,17 +1,26 @@
 (function(root) {
 
+// pull in underscore if we're running in a worker or in node
 if (root.importScripts)
   importScripts('underscore.js');
+else if (!root._)
+  var _ = require('underscore.js');
 
 var teams, g_lowest_score, g_best_sets, g_two_team_site, g_current_combo_num, g_nTeams, g_nSites, g_aCombos;
 
+// the round-robin generation engine can be called from a web page
+root.genRound = genRound;
+
+// or as a web-worker via message passing
 root.onmessage = function(event) {
-  root.genRound(event.data);
+  genRound(event.data);
 };
 
-// the round-robin generation engine can be called directly
-// via genRound() or as a web-worker w/ message posting
-root.genRound = function genRound(data, callback) {
+// or via node export/require()
+if (root.exports)
+  root.exports.genRound = genRound;
+
+function genRound(data, callback) {
   teams = deepClone(data.g_aTeams);
   g_two_team_site = data.g_two_team_site;
   g_current_combo_num = data.g_current_combo_num;
@@ -29,7 +38,7 @@ root.genRound = function genRound(data, callback) {
   (callback || root.postMessage)({
     'best_set': best_set
   });
-}
+};
 
 function randomizePositions(best_set) {
   // if last item has 1 team (bye) or 2 teams (2-team site) long, keep it at end

@@ -21,7 +21,6 @@
 
 var g_aTeams, g_aSites, g_nSites, g_nTeams;
 var g_aCombos = [];
-var g_num_combos = 0;
 var g_current_combo_num = 0;
 var g_aSets = [];
 var g_two_team_site;
@@ -92,7 +91,7 @@ function GlobalSetup(team_names, team_index_to_remove) {
 	var team_numbers = _(g_aTeams).pluck("nTeam");
 	if (team_index_to_remove != null)
 	  team_numbers.splice(team_index_to_remove, 1);
-	CreateAllCombos(team_numbers);
+	g_aCombos = createAllCombos(team_numbers);
 }
 
 function round(num) {
@@ -150,70 +149,6 @@ function ApplySet(set) {
 		if (nTeams == 2) {
 			++team1.nTwoTeamSite;
 			++team2.nTwoTeamSite;
-		}
-	}
-}
-
-// Creates all possible site combinations
-// in nested arrays to minimize duplication
-// For instance:
-// [0, 1, 2, [
-//   [3, 4, 5, [
-//      [6, 7, 8, [9]],
-//      [6, 7, 9, [8]],
-//      [6, 8, 9, [7]],
-//      [7, 8, 9, [6]]],
-//   [3, 4, 6, [
-//      [ ...
-function CreateAllCombos(team_numbers) {
-  g_aCombos = [];
-	AddToCombo([], team_numbers, g_aCombos);
-}
-
-function AddToCombo(aTeamsUsed, aTeamsLeft, combos) {
-  // loop through aTeamsLeft until we find one that works
-	var nTeams = aTeamsLeft.length;
-	for (var nTeam = 0; nTeam < nTeams; ++nTeam) {
-		var team = aTeamsLeft[nTeam];
-		
-		// force ascending order within a triad to eliminate duplicates
-		if ((aTeamsUsed.length % 3 == 0) || (team > aTeamsUsed[aTeamsUsed.length - 1]))
-		{
-			// force ascending order between triads to eliminate duplicate triads
-			// CAREFUL: only force ascending order between sites if the last site is full
-			// && (aTeamsUsed.length != 9 || team > aTeamsUsed[6])
-			if ((aTeamsUsed.length != 3 || team > aTeamsUsed[0]) && (aTeamsUsed.length != 6 || team > aTeamsUsed[3] || g_two_team_site == 3 || g_aTeams.length == 7))
-			{
-				// clone and push this team on
-				var newTeamsUsed = [].concat(aTeamsUsed);
-				newTeamsUsed.push(team);
-				
-				// clone and remove this team
-				var newTeamsLeft = [].concat(aTeamsLeft);
-				newTeamsLeft.splice(nTeam, 1);
-				
-				var num_teams_in_site = (newTeamsUsed.length % 3) || 3;
-				
-				var this_entry;
-				if (!newTeamsLeft.length || num_teams_in_site == 3)
-				  this_entry = newTeamsUsed.slice(-num_teams_in_site);
-				
-				var nested_site;
-				if (this_entry && newTeamsLeft.length) {
-				  nested_site = [];
-				  this_entry.push(nested_site);
-				}
-				
-				if (this_entry)
-				  combos.push(this_entry);
-				
-				// if there are teams left, keep recursing
-				if (newTeamsLeft.length)
-				  AddToCombo(newTeamsUsed, newTeamsLeft, nested_site || combos);
-				// otherwise, increment the # of combos (b/c this is a leaf)
-				else
-				  ++g_num_combos;
-			}
 		}
 	}
 }
