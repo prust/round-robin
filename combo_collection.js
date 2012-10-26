@@ -1,9 +1,14 @@
 (function(root) {
 
+  // pull in underscore if we're running in a worker or in node
+  if (root.importScripts)
+    importScripts('underscore.js');
+  var _ = root._ || require('underscore.js');
+
   if (root.exports)
-    root.exports.createAllCombos = createAllCombos;
+    root.exports.createCombos = createCombos;
   else
-    root.createAllCombos = createAllCombos;
+    root.createCombos = createCombos;
 
   // Creates all possible site combinations
   // in nested arrays to minimize duplication
@@ -16,13 +21,15 @@
   //      [7, 8, 9, [6]]],
   //   [3, 4, 6, [
   //      [ ...
-  var two_team_site, num_total_teams;
-  function createAllCombos(team_numbers, num_two_team_site) {
-    var combos = [];
-    addToCombo([], team_numbers, combos);
-    
+  var two_team_site, num_teams;
+  function createCombos(teams, num_two_team_site) {
+    var team_ids = _(_(teams).filter(function(team) { return team.active; })).pluck('nTeam');
+
     two_team_site = num_two_team_site;
-    num_total_teams = team_numbers.length;
+    num_teams = team_ids.length;
+
+    var combos = [];
+    addToCombo([], team_ids, combos);
     return combos;
   }
 
@@ -38,7 +45,7 @@
         // force ascending order between triads to eliminate duplicate triads
         // CAREFUL: only force ascending order between sites if the last site is full
         // && (aTeamsUsed.length != 9 || team > aTeamsUsed[6])
-        if ((aTeamsUsed.length != 3 || team > aTeamsUsed[0]) && (aTeamsUsed.length != 6 || team > aTeamsUsed[3] || two_team_site == 3 || num_total_teams == 7))
+        if ((aTeamsUsed.length != 3 || team > aTeamsUsed[0]) && (aTeamsUsed.length != 6 || team > aTeamsUsed[3] || two_team_site == 3 || num_teams == 7))
         {
           // clone and push this team on
           var newTeamsUsed = [].concat(aTeamsUsed);

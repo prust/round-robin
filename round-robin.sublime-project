@@ -2,7 +2,8 @@
 	"folders":
 	[
 		{
-			"path": "/C/Users/prust/Teens For Christ/Bible Quizzing/RoundRobinGenerator"
+			"path": "/C/Users/prust/Teens For Christ/Bible Quizzing/RoundRobinGenerator",
+			"file_exclude_patterns": ["*.sublime-workspace"]
 		}
 	]
 }

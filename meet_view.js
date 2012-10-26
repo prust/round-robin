@@ -38,7 +38,7 @@ $(function() {
       var separator_row = [];
       _(this.model.rounds.length).times(function() { separator_row.push(''); });
 
-      var sites = _.range(g_nSites);
+      var sites = _.range(this.getNumSites());
       sites.forEach(function(site_num) {
         _.range(3).forEach(function(team_position) {
           if (this.positionIsPopulated(site_num, team_position))
@@ -53,6 +53,10 @@ $(function() {
       this.renderTable('round-robin', col_headings, rows);
     },
 
+    'getNumSites': function getNumSites() {
+      return Math.ceil(g_aTeams.length / 3);
+    },
+
     'positionIsPopulated': function positionIsPopulated(site_num, team_position) {
       return _(this.getTeamsForSiteAndPosition(site_num, team_position)).any(_.identity);
     },
@@ -63,7 +67,7 @@ $(function() {
         if (team_num == null)
           return '';
         else
-          return GetTeamByNum(team_num).team;
+          return g_aTeams[team_num].team;
       }.bind(this));
     },
 

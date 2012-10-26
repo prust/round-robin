@@ -11,7 +11,12 @@ $(function() {
 
       var team_names = JSON.parse(localStorage.getItem('team_names')) || ['Sword Savers', 'The Odds', 'Wooturtles', 'Slo-Mo', 'UM', '7 Dwarves', 'Risers', 'Outnumbered', 'Peloponnesians', 'FBIQ'];
       this.$('#teams').val(team_names.join(', '));
-      GlobalSetup(team_names);
+      
+      if (!window.Worker)
+        alert('This page will not work in your web browser because it does not support Web Workers. Try Firefox 3.5+ or Chrome.');
+      
+      window.g_aTeams = Team.createFromNames(team_names);
+      window.g_aCombos = createCombos(g_aTeams);
 
       Meets.bind('add', this.addOne);
       Meets.bind('refresh', this.addLots);

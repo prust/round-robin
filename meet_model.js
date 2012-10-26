@@ -1,7 +1,7 @@
 $(function() {
   window.Round = Backbone.Model.extend({
     initialize: function() {
-      ApplySet(this.get('set'));
+      _(g_aTeams).invoke('applySet', this.get('set'));
     },
     clear: function() {
       this.destroy();
@@ -46,16 +46,8 @@ $(function() {
       // and the software could deal graciously with teams being added/deleted
 
       var data = {
-        combos: g_aCombos,
-        nCumulativeScore: 0,
-        prev_sites: [],
-        g_aTeams: g_aTeams,
-        g_two_team_site: g_two_team_site,
-        g_current_combo_num: g_current_combo_num,
-        g_nTeams: g_nTeams,
-        g_num_rounds: 1,
-        g_nSites: g_nSites,
-        set_to_apply: null
+        'combos': g_aCombos,
+        'teams': g_aTeams
       };
 
       if (window.genRound) {
@@ -80,8 +72,9 @@ $(function() {
       }      
     },
     applyNewSet: function(data) {
-      var best_set = data.best_set;
-      Assert(best_set, 'no best_set returned');
+      var best_set = randomizePositions(data.best_set);
+      if (!best_set)
+        throw new Error('no best_set returned');
       
       this.rounds.create({'set': best_set, 'meet_id': this.id});
     },
@@ -97,4 +90,20 @@ $(function() {
   });
   
   window.Meets = new MeetList;
+
+  function randomizePositions(best_set) {
+    // if last item has 1 team (bye) or 2 teams (2-team site) long, keep it at end
+    var last_item = best_set[best_set.length-1];
+    var is_bye_or_two_team = last_item.length < 3;
+    if (is_bye_or_two_team)
+      best_set.splice(best_set.length-1, 1);
+    
+    best_set = _.shuffle(best_set.map(function(triad) {
+      return _.shuffle(triad);
+    }));
+
+    if (is_bye_or_two_team)
+      best_set.push(last_item);
+    return best_set;
+  }
 });
