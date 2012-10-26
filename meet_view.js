@@ -66,8 +66,8 @@ $(function() {
         var team_num = sites[site_num][team_position];
         if (team_num == null)
           return '';
-        else
-          return g_aTeams[team_num].team;
+        var team = g_aTeams[team_num];
+        return team ? team.team : 'Unknown Team';
       }.bind(this));
     },
 
