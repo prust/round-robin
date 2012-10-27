@@ -43,13 +43,15 @@
   };
 
   Team.prototype.applySet = function applySet(set, unapply) {
-    set.forEach(function(combo) {
+    var num_combos = set.length;
+    for (var combo_num = 0; combo_num < num_combos; ++combo_num) {
+      var combo = set[combo_num];
       this.applyCombo(combo, unapply);
-    }.bind(this));
+    }
   };
 
   Team.prototype.applyCombo = function applyCombo(combo, unapply) {
-    if (!_(combo).contains(this.nTeam))
+    if (combo[0] != this.nTeam && combo[1] != this.nTeam && combo[2] != this.nTeam)
       return; 
 
     var incr_or_decr = unapply ? -1 : 1;
@@ -59,11 +61,12 @@
     if (combo.length == 2)
       this.nTwoTeamSite = this.nTwoTeamSite + incr_or_decr;
 
-    combo.forEach(function(team_ix) {
-      if (team_ix == this.nTeam)
-        return;
-      this.timesPlayedTeam[team_ix] = this.timesPlayedTeam[team_ix] + incr_or_decr;
-    }.bind(this));
+    var num_positions = combo.length;
+    for (var position_num = 0; position_num < num_positions; ++position_num) {
+      var team_ix = combo[position_num];
+      if (team_ix != this.nTeam)
+        this.timesPlayedTeam[team_ix] = this.timesPlayedTeam[team_ix] + incr_or_decr;
+    }
   };
 
   Team.prototype.clone = function clone() {

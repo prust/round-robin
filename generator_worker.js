@@ -1,6 +1,5 @@
 (function(root) {
 
-// pull in underscore if we're running in a worker or in node
 if (root.importScripts) {
   importScripts('underscore.js');
   importScripts('team.js');
@@ -8,9 +7,9 @@ if (root.importScripts) {
 var _ = root._ || require('underscore.js');
 var Team = root.Team || require('team.js');
 
-// the round-robin generation engine can be called from a web page or node
+// exposes to a web page and node
 root.genRound = genRound;
-// or as a web-worker via message passing
+// exposes as a web-worker via message passing
 root.onmessage = function(event) {
   genRound(event.data);
 };
@@ -63,7 +62,7 @@ function pickByLookahead(sets) {
     var nLSets = best_sets.length;
     for (var nLSet = 0; nLSet < nLSets; ++nLSet) {
       var lookahead_set = best_sets[nLSet];
-      var nScore = Math.round(ScoreSet([_(set).flatten()], [_(lookahead_set).flatten()]) * 10);
+      var nScore = Math.round(ScoreSet(set, lookahead_set) * 10);
       if (nLowestScore == null || nScore <= nLowestScore) {
         if (nScore == nLowestScore) {
           if (!_(lookahead_best_sets).include(set))
@@ -79,36 +78,13 @@ function pickByLookahead(sets) {
   return lookahead_best_sets;
 }
 
-/*
-ScoreSet(aSet[, aSet2])
-
-Calculates scores of one (or possibly a sequence of sequential sets)
-by temporarily making it seem as though the teams all played each-other,
-adding up the score, and then decrementing to return the teams to their original
-state.
-
-TODO: wouldn't it be simpler to just clone the teams & increment the clones?
-
-*/
 function ScoreSet(aSet, aSet2) {
   var nScore = 0;
   
-  // simulate placing 9 teams in 9 sites
-  var nRounds = aSet.length;
-  for(var nRound = 0; nRound < nRounds; ++nRound) {
-    var combo = aSet[nRound];
-    IncrementTimesPlayed3(teams[combo[0]], teams[combo[1]], teams[combo[2]]);
-    IncrementTimesPlayed3(teams[combo[3]], teams[combo[4]], teams[combo[5]]);
-
-    if (combo.length == 7) {
-      teams[combo[6]].nByes += 1;
-    }
-    else {
-      IncrementTimesPlayed3(teams[combo[6]], teams[combo[7]], teams[combo[8]]);
-      
-      if (combo.length == 10)
-        teams[combo[9]].nByes += 1;
-    }
+  var num_teams = teams.length;
+  for (var team_num = 0; team_num < num_teams; ++team_num) {
+    var team = teams[team_num];
+    team.applySet(aSet, false);
   }
   
   // if there's only 1 set, add up the score
@@ -128,71 +104,13 @@ function ScoreSet(aSet, aSet2) {
     nScore = ScoreSet(aSet2);
   }
   
-  // simulate placing 9 teams in 9 sites
-  var nRounds = aSet.length;
-  for(var nRound = 0; nRound < nRounds; ++nRound) {
-    var combo = aSet[nRound];
-    DecrementTimesPlayed3(teams[combo[0]], teams[combo[1]], teams[combo[2]]);
-    DecrementTimesPlayed3(teams[combo[3]], teams[combo[4]], teams[combo[5]]);
-
-    if (combo.length == 7) {
-      teams[combo[6]].nByes -= 1;
-    }
-    else {
-      DecrementTimesPlayed3(teams[combo[6]], teams[combo[7]], teams[combo[8]]);
-      
-      if (combo.length == 10)
-        teams[combo[9]].nByes -= 1;
-    }
+  var num_teams = teams.length;
+  for (var team_num = 0; team_num < num_teams; ++team_num) {
+    var team = teams[team_num];
+    team.applySet(aSet, true);
   }
   
   return nScore;
-}
-
-// Third version (sum of deviations from the mean)
-function TeamScore(team) {
-  var nSum = 0;
-  var nDeviations = 0;
-  for(var nTeam = 0; nTeam < teams.length; ++nTeam)
-    nSum += team.timesPlayedTeam[nTeam];
-  var nMean = nSum / teams.length;
-  for(var nTeam = 0; nTeam < teams.length; ++nTeam)
-    nDeviations += Math.abs(nMean - team.timesPlayedTeam[nTeam])
-  
-  // severely penalize any combo that gives a single team multiple byes
-  nDeviations += 10000 * (team.nByes * team.nByes - 1);
-
-  return nDeviations;
-}
-
-function IncrementTimesPlayed3(team1, team2, team3)
-{
-  //IncrementTimesPlayed(team1, team2);
-  ++team2.timesPlayedTeam[team1.nTeam];
-  ++team1.timesPlayedTeam[team2.nTeam];
-  
-  //IncrementTimesPlayed(team2, team3);
-  ++team3.timesPlayedTeam[team2.nTeam];
-  ++team2.timesPlayedTeam[team3.nTeam];
-  
-  //IncrementTimesPlayed(team1, team3);
-  ++team3.timesPlayedTeam[team1.nTeam];
-  ++team1.timesPlayedTeam[team3.nTeam];
-}
-
-function DecrementTimesPlayed3(team1, team2, team3)
-{
-  //IncrementTimesPlayed(team1, team2);
-  --team2.timesPlayedTeam[team1.nTeam];
-  --team1.timesPlayedTeam[team2.nTeam];
-  
-  //IncrementTimesPlayed(team2, team3);
-  --team3.timesPlayedTeam[team2.nTeam];
-  --team2.timesPlayedTeam[team3.nTeam];
-  
-  //IncrementTimesPlayed(team1, team3);
-  --team3.timesPlayedTeam[team1.nTeam];
-  --team1.timesPlayedTeam[team3.nTeam];
 }
 
 function chooseRandomItem(array, remove) {
@@ -256,13 +174,9 @@ function trySiteCombos(combos, nCumulativeScore, prev_sites) {
     // recurse if there are nested combinations
     var nested_combo = getNestedCombos(combo);
     if (nested_combo && nested_combo.length) {
-      // every single [..., [0, 5, 7] is too high to recurse, why are their scores in the 400s?
-      //if (lowest_score != -1 && prev_sites.length == 6 && prev_sites[0][2] == 7 && prev_sites[0][1] == 5 && prev_sites[0][0] == 0)
-      //  logDebug('[0, 5, 7] - ' + new_score + ', lowest_score: ' + lowest_score + ', ' + prev_sites);
       if (lowest_score == -1 || new_score <= lowest_score) {
-        // could streamline by doing "new_prev_sites.push(combo);"
         var new_prev_sites = [].concat(prev_sites);
-				new_prev_sites.push([combo[0], combo[1], combo[2]]);
+				new_prev_sites.push(combo.slice(0, 3));
         trySiteCombos(nested_combo, new_score, new_prev_sites);
       }
     }
@@ -279,7 +193,6 @@ function trySiteCombos(combos, nCumulativeScore, prev_sites) {
           else if (lowest_score == -1 || new_score < lowest_score) {
             best_sets = [set];
             lowest_score = new_score;
-            //logDebug('new low score: ' + new_score + ', ' + set);
           }
         }
       }
@@ -308,22 +221,38 @@ function isLeafNode(combo) {
   return !getNestedCombos(combo);
 }
 
-// 5th version based on just squaring the # of times played
-function TeamScore5(team) {
-	var sqrTotal = 0;
-	var timesPlayedTeam = team.timesPlayedTeam;
-	for(var nTeam = 0; nTeam < teams.length; ++nTeam) {
-    var newNumber = timesPlayedTeam[nTeam];
-    sqrTotal += newNumber * newNumber;
-	}
-	
-	// multiple byes or times in a two-team site
+// Third version (sum of deviations from the mean)
+function TeamScore(team) {
+  var nSum = 0;
+  var nDeviations = 0;
+  for(var nTeam = 0; nTeam < teams.length; ++nTeam)
+    nSum += team.timesPlayedTeam[nTeam];
+  var nMean = nSum / teams.length;
+  for(var nTeam = 0; nTeam < teams.length; ++nTeam)
+    nDeviations += Math.abs(nMean - team.timesPlayedTeam[nTeam])
+  
   // severely penalize any combo that gives a single team multiple byes
-	nDeviations += 10000 * (team.nByes * team.nByes - 1);
-	if (team.nTwoTeamSite)
-		sqrTotal += (1000000 * (team.nTwoTeamSite * team.nTwoTeamSite));
-  return sqrTotal;
+  nDeviations += 10000 * (team.nByes * team.nByes - 1);
+
+  return nDeviations;
 }
+
+// 5th version based on just squaring the # of times played
+// function TeamScore5(team) {
+// 	var sqrTotal = 0;
+// 	var timesPlayedTeam = team.timesPlayedTeam;
+// 	for(var nTeam = 0; nTeam < teams.length; ++nTeam) {
+//     var newNumber = timesPlayedTeam[nTeam];
+//     sqrTotal += newNumber * newNumber;
+// 	}
+	
+// 	// multiple byes or times in a two-team site
+//   // severely penalize any combo that gives a single team multiple byes
+// 	nDeviations += 10000 * (team.nByes * team.nByes - 1);
+// 	if (team.nTwoTeamSite)
+// 		sqrTotal += (1000000 * (team.nTwoTeamSite * team.nTwoTeamSite));
+//   return sqrTotal;
+// }
 
 // augment the 5th version by providing the diff
 // between the current # of times played and the next one

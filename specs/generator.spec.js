@@ -12,8 +12,9 @@ describe('round-robin generator', function() {
   });
 
   it('should be non-deterministic (should not create identical sets after 3 runs)', function() {
+    expect(genSets(3, 6)).not.toEqual(genSets(3, 6));
     expect(genSets(3, 7)).not.toEqual(genSets(3, 7));
-    //expect(genSets(3, 8)).not.toEqual(genSets(3, 8));
+    expect(genSets(3, 8)).not.toEqual(genSets(3, 8));
     expect(genSets(3, 9)).not.toEqual(genSets(3, 9));
   });
 
@@ -40,7 +41,7 @@ describe('round-robin generator', function() {
     expect(getUniqNumTimesPlayed()).toEqual([1]);
   });
 
-  // this has failed on the rare occasion
+  // this has failed on the (very) rare occasion
   it('should have every team play every other team twice with 8 rounds and 9 teams', function() {
     genSets(8, 9);
     expect(getUniqNumTimesPlayed()).toEqual([2]);
