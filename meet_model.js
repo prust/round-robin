@@ -47,7 +47,8 @@ $(function() {
 
       var data = {
         'combos': g_aCombos,
-        'teams': g_aTeams
+        'teams': g_aTeams,
+        'prev_sets': this.rounds.invoke('get', 'set')
       };
 
       if (window.genRound) {

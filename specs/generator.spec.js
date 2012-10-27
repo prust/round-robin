@@ -10,18 +10,46 @@ describe('round-robin generator', function() {
     expect(set.length).toEqual(3);
     expect(_.flatten(set).length).toEqual(7);
   });
-  it('should not repeat identical sets on the first run', function() {
-    expect(genSets(1, 7)).not.toEqual(genSets(1, 7));
-  });
-  it('should not create identical sets after multiple runs', function() {
+
+  it('should be non-deterministic (should not create identical sets after 3 runs)', function() {
     expect(genSets(3, 7)).not.toEqual(genSets(3, 7));
-    expect(genSets(6, 7)).not.toEqual(genSets(6, 7));
+    //expect(genSets(3, 8)).not.toEqual(genSets(3, 8));
+    expect(genSets(3, 9)).not.toEqual(genSets(3, 9));
   });
+
+  it('should not repeat identical sets, even with twenty runs', function() {
+    var sets = genSets(20, 7);
+    expect(sets.length).toEqual(20);
+    sets.forEach(function(set) {
+      var other_sets = _(sets).without(set);
+      other_sets.forEach(function(other_set) {
+        expect(other_set).not.toEqual(set);
+      });
+    });
+  });
+
+  // this fails occasionally... and shouldn't
+  // with 6 rounds and 7 teams, most teams play each-other twice
   it('should have every team play each-other at least once with 6 rounds and 7 teams', function() {
     genSets(6, 7);
     expect(_(getCompetitionMatrix()).flatten()).not.toContain(0);
-  })
+  });
 
+  it('should have every team play every other team once with 4 rounds and 9 teams', function() {
+    genSets(4, 9);
+    expect(getUniqNumTimesPlayed()).toEqual([1]);
+  });
+
+  // this has failed on the rare occasion
+  it('should have every team play every other team twice with 8 rounds and 9 teams', function() {
+    genSets(8, 9);
+    expect(getUniqNumTimesPlayed()).toEqual([2]);
+  });
+
+  function getUniqNumTimesPlayed() {
+    var comp_matrix = getCompetitionMatrix();
+    return _(comp_matrix).chain().flatten().compact().uniq().value();
+  }
   function getCompetitionMatrix() {
     var competition_matrix = _(teams).pluck('timesPlayedTeam');
     nullOutTimesTeamPlayedItself(competition_matrix);
@@ -35,13 +63,15 @@ describe('round-robin generator', function() {
   function genSets(num_sets, num_teams) {
     teams = createTeams(num_teams);
     var combos = createCombos(teams);
-    return _.range(num_sets).map(function() {
-      return genSet(teams, combos);
+    var sets = [];
+    _.range(num_sets).forEach(function() {
+      sets.push(genSet(teams, combos, sets));
     });
+    return sets;
   }
-  function genSet(teams, combos) {
+  function genSet(teams, combos, prev_sets) {
     var set;
-    generator.genRound({'teams': teams, 'combos': combos}, function(result) {
+    generator.genRound({'teams': teams, 'combos': combos, 'prev_sets': prev_sets}, function(result) {
       set = result.best_set;
       _(teams).invoke('applySet', set);
     });

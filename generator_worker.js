@@ -29,6 +29,7 @@ function genRound(data, callback) {
   all_combos = data.combos;
   teams = ensureTeamsInstantiated(data.teams);
   teams = _(teams).invoke('clone');
+  prev_sets = data.prev_sets;
   
   genBestSets(null);
   var lookahead_best_sets = pickByLookahead(best_sets);
@@ -271,17 +272,25 @@ function trySiteCombos(combos, nCumulativeScore, prev_sites) {
       if (lowest_score == -1 || new_score <= lowest_score) {
         var set = [].concat(prev_sites);
         set.push(combo.slice(0, 3));
-        if (new_score == lowest_score) {
-          best_sets.push(set);
-        }
-        else if (lowest_score == -1 || new_score < lowest_score) {
-          best_sets = [set];
-          lowest_score = new_score;
-          //logDebug('new low score: ' + new_score + ', ' + set);
+        if (!isRepeat(set)) {
+          if (new_score == lowest_score) {
+            best_sets.push(set);
+          }
+          else if (lowest_score == -1 || new_score < lowest_score) {
+            best_sets = [set];
+            lowest_score = new_score;
+            //logDebug('new low score: ' + new_score + ', ' + set);
+          }
         }
       }
     }
   }
+}
+
+function isRepeat(set) {
+  return _(prev_sets).any(function(prev_set) {
+    return _(set).isEqual(prev_set);
+  });
 }
 
 function getTwoTeamSiteID(teams) {
