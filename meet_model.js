@@ -46,7 +46,7 @@ $(function() {
       // and the software could deal graciously with teams being added/deleted
 
       var data = {
-        'combos': g_aCombos,
+        'all_sets': g_all_sets,
         'teams': g_aTeams,
         'prev_sets': this.rounds.invoke('get', 'set')
       };

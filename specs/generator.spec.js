@@ -4,7 +4,7 @@ var Team = require('../team.js');
 var _ = require('underscore.js');
 
 describe('round-robin generator', function() {
-  var teams, cached_combos = {};
+  var teams, cached_sets = {};
   it('should return a nested array with all teams', function() {
     var set = genSets(1, 7)[0];
     expect(set.length).toEqual(3);
@@ -12,7 +12,7 @@ describe('round-robin generator', function() {
   });
 
   it('should be non-deterministic (should not create identical sets after 3 runs)', function() {
-    expect(genSets(3, 6)).not.toEqual(genSets(3, 6));
+   expect(genSets(3, 6)).not.toEqual(genSets(3, 6));
     expect(genSets(3, 7)).not.toEqual(genSets(3, 7));
     expect(genSets(3, 8)).not.toEqual(genSets(3, 8));
     expect(genSets(3, 9)).not.toEqual(genSets(3, 9));
@@ -63,16 +63,16 @@ describe('round-robin generator', function() {
   }
   function genSets(num_sets, num_teams) {
     teams = createTeams(num_teams);
-    var combos = createCombos(teams);
+    var all_sets = createSets(teams);
     var sets = [];
     _.range(num_sets).forEach(function() {
-      sets.push(genSet(teams, combos, sets));
+      sets.push(genSet(teams, all_sets, sets));
     });
     return sets;
   }
-  function genSet(teams, combos, prev_sets) {
+  function genSet(teams, all_sets, prev_sets) {
     var set;
-    generator.genRound({'teams': teams, 'combos': combos, 'prev_sets': prev_sets}, function(result) {
+    generator.genRound({'teams': teams, 'all_sets': all_sets, 'prev_sets': prev_sets}, function(result) {
       set = result.best_set;
       _(teams).invoke('applySet', set);
     });
@@ -84,10 +84,10 @@ describe('round-robin generator', function() {
     });
     return Team.createFromNames(team_names);
   }
-  function createCombos(teams) {
+  function createSets(teams) {
     var num_teams = teams.length; // sufficient until we start dealing w/ inactive teams
-    if (!cached_combos[num_teams])
-      cached_combos[num_teams] = ComboCollection.createCombos(teams);
-    return cached_combos[num_teams];
+    if (!cached_sets[num_teams])
+      cached_sets[num_teams] = ComboCollection.createSets(teams);
+    return cached_sets[num_teams];
   }
 });

@@ -16,7 +16,7 @@ $(function() {
         alert('This page will not work in your web browser because it does not support Web Workers. Try Firefox 3.5+ or Chrome.');
       
       window.g_aTeams = Team.createFromNames(team_names);
-      window.g_aCombos = createCombos(g_aTeams);
+      window.g_all_sets = createSets(g_aTeams);
 
       Meets.bind('add', this.addOne);
       Meets.bind('refresh', this.addLots);

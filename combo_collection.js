@@ -6,9 +6,9 @@
   var _ = root._ || require('underscore.js');
 
   if (root.exports)
-    root.exports.createCombos = createCombos;
+    root.exports.createSets = createSets;
   else
-    root.createCombos = createCombos;
+    root.createSets = createSets;
 
   // Creates all possible site combinations
   // in nested arrays to minimize duplication
@@ -22,7 +22,7 @@
   //   [3, 4, 6, [
   //      [ ...
   var two_team_site, num_teams;
-  function createCombos(teams, num_two_team_site) {
+  function createSets(teams, num_two_team_site) {
     var team_ids = _(_(teams).filter(function(team) { return team.active; })).pluck('nTeam');
 
     two_team_site = num_two_team_site;
@@ -30,7 +30,27 @@
 
     var combos = [];
     addToCombo([], team_ids, combos);
-    return combos;
+    return flattenCombos(combos);
+  }
+
+  function flattenCombos(combos, set, flat_combos) {
+    if (!flat_combos)
+      flat_combos = [];
+
+    var nCombos = combos.length;
+    for (var nCombo = 0; nCombo < nCombos; ++nCombo) {
+      var combo = combos[nCombo];
+      var new_set = set ? set.slice() : [];
+      new_set.push(combo.slice(0, 3));
+      var nested_combos = combo[3];
+      
+      if (nested_combos)
+        flattenCombos(nested_combos, new_set, flat_combos);
+      else
+        flat_combos.push(new_set);
+    }
+
+    return flat_combos;
   }
 
   function addToCombo(aTeamsUsed, aTeamsLeft, combos) {

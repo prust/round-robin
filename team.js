@@ -52,7 +52,7 @@
 
   Team.prototype.applyCombo = function applyCombo(combo, unapply) {
     if (combo[0] != this.nTeam && combo[1] != this.nTeam && combo[2] != this.nTeam)
-      return; 
+      return;
 
     var incr_or_decr = unapply ? -1 : 1;
     

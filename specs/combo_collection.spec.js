@@ -4,16 +4,23 @@ var Team = require('../team.js');
 var _ = require('underscore.js');
 
 describe('round-robin generator', function() {
-  var teams = createTeams(7);
-  var combos = ComboCollection.createCombos(teams);
-  
-   it('should not repeat identical results', function() {
-     expect(combos.length).toEqual(35);
-   });
+  it('should generate the correct number of sets for each number of teams', function() {
+    expect(getNumSets(4)).toEqual(3);
+    expect(getNumSets(5)).toEqual(6);
+    expect(getNumSets(6)).toEqual(10);
+    expect(getNumSets(7)).toEqual(70);
+    expect(getNumSets(8)).toEqual(126);
+    expect(getNumSets(9)).toEqual(280);
+    expect(getNumSets(10)).toEqual(2800);
+    expect(getNumSets(11)).toEqual(15400);
+  });
 });
 
+function getNumSets(num_teams) {
+  var teams = createTeams(num_teams);
+  return ComboCollection.createSets(teams).length;
+}
 function createTeams(num_teams) {
-  var num_teams = 7;
   var team_names = _.range(1, num_teams + 1).map(function(team_num) {
     return 'Team ' + team_num;
   });
