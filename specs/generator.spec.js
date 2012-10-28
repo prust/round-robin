@@ -11,11 +11,11 @@ describe('round-robin generator', function() {
     expect(_.flatten(set).length).toEqual(7);
   });
 
-  it('should be non-deterministic (should not create identical sets after 3 runs)', function() {
-   expect(genSets(3, 6)).not.toEqual(genSets(3, 6));
-    expect(genSets(3, 7)).not.toEqual(genSets(3, 7));
-    expect(genSets(3, 8)).not.toEqual(genSets(3, 8));
-    expect(genSets(3, 9)).not.toEqual(genSets(3, 9));
+  it('should be non-deterministic (should not create identical sets after 4 runs)', function() {
+   expect(genSets(4, 6)).not.toEqual(genSets(4, 6));
+    expect(genSets(4, 7)).not.toEqual(genSets(4, 7));
+    expect(genSets(4, 8)).not.toEqual(genSets(4, 8));
+    expect(genSets(4, 9)).not.toEqual(genSets(4, 9));
   });
 
   it('should not repeat identical sets, even with twenty runs', function() {
@@ -47,9 +47,24 @@ describe('round-robin generator', function() {
     expect(getUniqNumTimesPlayed()).toEqual([2]);
   });
 
+  it('should have every team play each other 4x with 6 teams and 10 rounds', function() {
+    genSets(10, 6);
+    expect(getUniqNumTimesPlayed()).toEqual([4]);
+  });
+
+  // it('should attempt to keep the spread from exceeding 1', function() {
+  //   // we have 1s and 4s in this list, the avg is 2.4
+  //   // we *should* have alls 2's and 3's
+  //   genSets(6, 6);
+  //   expect(getUniqNumTimesPlayed().sort()).toEqual([2, 3])
+  // });
+
   function getUniqNumTimesPlayed() {
+    return _(getCompetitionNumbers()).uniq();
+  }
+  function getCompetitionNumbers() {
     var comp_matrix = getCompetitionMatrix();
-    return _(comp_matrix).chain().flatten().compact().uniq().value();
+    return _(comp_matrix).chain().flatten().compact().value();
   }
   function getCompetitionMatrix() {
     var competition_matrix = _(teams).pluck('timesPlayedTeam');

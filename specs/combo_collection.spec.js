@@ -9,8 +9,9 @@ describe('round-robin generator', function() {
     expect(getNumSets(5)).toEqual(10);
     expect(getNumSets(6)).toEqual(10);
     expect(getNumSets(7)).toEqual(70);
-    expect(getNumSets(8)).toEqual(280); // 2.2 sec
-    // expect(getNumSets(9)).toEqual(280); // 17 sec
+    expect(getNumSets(8)).toEqual(280);
+    // expect(getNumSets(9)).toEqual(280); // 5 sec
+    // expect(getNumSets(10)).toEqual(2800); // 40 sec
   });
 });
 
