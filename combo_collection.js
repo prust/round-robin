@@ -10,91 +10,73 @@
   else
     root.createSets = createSets;
 
-  // Creates all possible site combinations
-  // in nested arrays to minimize duplication
-  // For instance:
-  // [0, 1, 2, [
-  //   [3, 4, 5, [
-  //      [6, 7, 8, [9]],
-  //      [6, 7, 9, [8]],
-  //      [6, 8, 9, [7]],
-  //      [7, 8, 9, [6]]],
-  //   [3, 4, 6, [
-  //      [ ...
-  var two_team_site, num_teams;
-  function createSets(teams, num_two_team_site) {
-    var team_ids = _(_(teams).filter(function(team) { return team.active; })).pluck('nTeam');
-
-    two_team_site = num_two_team_site;
-    num_teams = team_ids.length;
-
-    var combos = [];
-    addToCombo([], team_ids, combos);
-    return flattenCombos(combos);
+  function createSets(teams) {
+    var all_sets = [];
+    var team_ids = getActiveTeamIDs(teams);
+    generateSets(team_ids, [], all_sets);
+    return all_sets;
   }
 
-  function flattenCombos(combos, set, flat_combos) {
-    if (!flat_combos)
-      flat_combos = [];
+  function generateSets(team_ids, set, all_sets) {
+    team_ids.forEach(function(team_id) {
+      var new_set = set.slice();
+      new_set.push(team_id);
 
-    var nCombos = combos.length;
-    for (var nCombo = 0; nCombo < nCombos; ++nCombo) {
-      var combo = combos[nCombo];
-      var new_set = set ? set.slice() : [];
-      new_set.push(combo.slice(0, 3));
-      var nested_combos = combo[3];
-      
-      if (nested_combos)
-        flattenCombos(nested_combos, new_set, flat_combos);
-      else
-        flat_combos.push(new_set);
-    }
-
-    return flat_combos;
-  }
-
-  function addToCombo(aTeamsUsed, aTeamsLeft, combos) {
-    // loop through aTeamsLeft until we find one that works
-    var nTeams = aTeamsLeft.length;
-    for (var nTeam = 0; nTeam < nTeams; ++nTeam) {
-      var team = aTeamsLeft[nTeam];
-      
-      // force ascending order within a triad to eliminate duplicates
-      if ((aTeamsUsed.length % 3 == 0) || (team > aTeamsUsed[aTeamsUsed.length - 1]))
-      {
-        // force ascending order between triads to eliminate duplicate triads
-        // CAREFUL: only force ascending order between sites if the last site is full
-        // && (aTeamsUsed.length != 9 || team > aTeamsUsed[6])
-        if ((aTeamsUsed.length != 3 || team > aTeamsUsed[0]) && (aTeamsUsed.length != 6 || team > aTeamsUsed[3] || two_team_site == 3 || num_teams == 7))
-        {
-          // clone and push this team on
-          var newTeamsUsed = [].concat(aTeamsUsed);
-          newTeamsUsed.push(team);
-          
-          // clone and remove this team
-          var newTeamsLeft = [].concat(aTeamsLeft);
-          newTeamsLeft.splice(nTeam, 1);
-          
-          var num_teams_in_site = (newTeamsUsed.length % 3) || 3;
-          
-          var this_entry;
-          if (!newTeamsLeft.length || num_teams_in_site == 3)
-            this_entry = newTeamsUsed.slice(-num_teams_in_site);
-          
-          var nested_site;
-          if (this_entry && newTeamsLeft.length) {
-            nested_site = [];
-            this_entry.push(nested_site);
-          }
-          
-          if (this_entry)
-            combos.push(this_entry);
-          
-          // if there are teams left, keep recursing
-          if (newTeamsLeft.length)
-            addToCombo(newTeamsUsed, newTeamsLeft, nested_site || combos);
-        }
+      if (team_ids.length > 1) {
+        var other_team_ids = _(team_ids).without(team_id);
+        generateSets(other_team_ids, new_set, all_sets);
       }
-    }
+      else {
+        addSetIfNotThere(new_set, all_sets);
+      }
+    });
+  }
+
+  function addSetIfNotThere(new_set, all_sets) {
+    new_set = breakInto3TeamCombos(new_set);
+    new_set = sortCombos(new_set);
+    var sorted_ix = getSortedIx(new_set, all_sets);
+
+    if (!_(all_sets[sorted_ix]).isEqual(new_set))
+      all_sets.splice(sorted_ix, 0, new_set);
+  }
+
+  function getSortedIx(set, all_sets) {
+    return _.sortedIndex(all_sets, set, function(set) {
+      return _(set).flatten().join(',');
+    });
+  }
+
+  function breakInto3TeamCombos(set) {
+    var num_combos = Math.ceil(set.length / 3);
+    return _.range(num_combos).map(function(combo_num) {
+      var start_ix = combo_num * 3;
+      var combo = set.slice(start_ix, start_ix + 3);
+      combo.sort();
+      return combo;
+    });
+  }
+
+  function sortCombos(set) {
+    var small_combo = _(set).find(function(combo) {
+      return combo.length < 3;
+    });
+    
+    if (small_combo)
+      set = _(set).without(small_combo);
+    
+    set = _(set).sortBy(0);
+    
+    if (small_combo)
+      set.push(small_combo);
+
+    return set;
+  }
+
+  function getActiveTeamIDs(teams) {
+    var active_teams = _(teams).filter(function(team) { 
+      return team.active;
+    });
+    return _(active_teams).pluck('nTeam');
   }
 })(this);

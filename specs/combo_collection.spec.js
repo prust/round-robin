@@ -5,14 +5,12 @@ var _ = require('underscore.js');
 
 describe('round-robin generator', function() {
   it('should generate the correct number of sets for each number of teams', function() {
-    expect(getNumSets(4)).toEqual(3);
-    expect(getNumSets(5)).toEqual(6);
+    expect(getNumSets(4)).toEqual(4);
+    expect(getNumSets(5)).toEqual(10);
     expect(getNumSets(6)).toEqual(10);
     expect(getNumSets(7)).toEqual(70);
-    expect(getNumSets(8)).toEqual(126);
-    expect(getNumSets(9)).toEqual(280);
-    expect(getNumSets(10)).toEqual(2800);
-    expect(getNumSets(11)).toEqual(15400);
+    expect(getNumSets(8)).toEqual(280); // 2.2 sec
+    // expect(getNumSets(9)).toEqual(280); // 17 sec
   });
 });
 
