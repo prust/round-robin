@@ -50,5 +50,4 @@ $(function() {
       location.reload();
     }
   });
-  window.App = new AppView;
 });

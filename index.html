@@ -15,6 +15,19 @@
 	  <script src="meet_view.js"></script>
 	  <script src="app_view.js"></script>
 	  <script src="bootstrap/js/bootstrap.js"></script>
+    <script>
+      $(document).ready(function() {
+        $('#round-robin-app').prepend('<div class="alert alert-info">Generating all possible team combinations, please wait.</div>');
+        window.onerror = function(msg, url, line) {
+        	$('.alert.alert-info').remove();
+        	$('#round-robin-app').prepend('<div class="alert alert-error">Error: ' + msg + '<br>' + url + ', line ' + line + '</div>');
+        }
+        _.defer(function() {
+          window.App = new AppView();
+          $('.alert.alert-info').remove();
+        });
+      });
+    </script>
 	</head>
 
 	<body id="round-robin-app">

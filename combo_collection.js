@@ -18,18 +18,21 @@
   }
 
   function generateSets(team_ids, set, all_sets) {
-    team_ids.forEach(function(team_id) {
+    var len = team_ids.length;
+    for (var ix = 0; ix < len; ++ix) {
+      var team_id = team_ids[ix];
       var new_set = set.slice();
       new_set.push(team_id);
 
       if (team_ids.length > 1) {
-        var other_team_ids = _(team_ids).without(team_id);
+        var other_team_ids = team_ids.slice();
+        other_team_ids.splice(ix, 1);
         generateSets(other_team_ids, new_set, all_sets);
       }
       else {
         addSetIfSorted(new_set, all_sets);
       }
-    });
+    }
   }
 
   function addSetIfSorted(new_set, all_sets) {
