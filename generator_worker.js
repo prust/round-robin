@@ -98,13 +98,22 @@ function trySiteCombos(remaining_sets, target_depth) {
   return best_sets;
 }
 
-// we can't use _.difference b/c we need to do deep equality testing
+// this doesn't actually work b/c prev_set is not ordered
+// and set appears to be ordered for each triad with the triads in reverse order
 function getRemaining(all_sets, prev_sets) {
-  return _(all_sets).filter(function(set) {
+  console.log('all:', all_sets.length, 'prev:', prev_sets.length);
+  var remaining = _(all_sets).filter(function(set) {
     return !_(prev_sets).any(function(prev_set) {
-      return _.isEqual(prev_set, set);
+      //console.log('prev:', prev_set, 'set:', set);
+      console.log(prev_set.toString(), set.toString());
+      var is_eq = prev_set.toString() == set.toString(); //_.isEqual(prev_set, set);
+      if (is_eq)
+        console.log('is equal!');
+      return is_eq;
     });
   });
+  console.log('remaining:', remaining.length);
+  return remaining;
 }
 
 function getTwoTeamSiteID(teams) {
