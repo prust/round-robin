@@ -48,11 +48,15 @@ $(function() {
       var data = {
         'all_sets': g_all_sets,
         'teams': g_aTeams,
-        'prev_sets': this.rounds.invoke('get', 'set')
+        'prev_sets': this.rounds.invoke('get', 'set'),
+        'depth': 6
       };
 
       if (window.genRound) {
-        genRound(data, this.applyNewSet.bind(this));
+        genRound(data, function(data) {
+          report(data);
+          _.forEach(data.best_set, this.applyNewSet.bind(this));
+        }.bind(this));
       }
       else {
         try {
@@ -63,7 +67,8 @@ $(function() {
           return;
         }
         worker.onmessage = function(event) {
-          this.applyNewSet(event.data);
+          report(event.data);
+          _.forEach(event.data.best_set, this.applyNewSet.bind(this));
         }.bind(this);
         worker.onerror = function(error) {
           alert('There was an error:');
@@ -72,8 +77,8 @@ $(function() {
         worker.postMessage(data);
       }      
     },
-    applyNewSet: function(data) {
-      var best_set = randomizePositions(data.best_set);
+    applyNewSet: function(best_set) {
+      best_set = randomizePositions(best_set);
       if (!best_set)
         throw new Error('no best_set returned');
       
@@ -106,5 +111,12 @@ $(function() {
     if (is_bye_or_two_team)
       best_set.push(last_item);
     return best_set;
+  }
+
+  function report(data) {
+    if (!window.console)
+      return;
+    console.log('mean: ' + data.mean);
+    console.log('std dev: ' + data.std_dev);
   }
 });

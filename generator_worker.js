@@ -17,53 +17,22 @@ root.onmessage = function(event) {
 var teams;
 
 function genRound(data, callback) {
-  var all_sets = data.all_sets;
-  var remaining_sets = getRemaining(all_sets, data.prev_sets);
+  var remaining_sets = data.all_sets;//getRemaining(data.all_sets, data.prev_sets);
   teams = ensureTeamsInstantiated(data.teams);
-  teams = _(teams).invoke('clone');
-  prev_sets = data.prev_sets;
   
-  var best_sets = trySiteCombos(remaining_sets);
-  var lookahead_best_sets = pickByLookahead(best_sets, remaining_sets);
+  var best_sets = trySiteCombos(remaining_sets, data.depth || 1);
   
-  var best_set = chooseRandomItem(lookahead_best_sets);
+  var best_set = chooseRandomItem(best_sets);
+  _.forEach(best_set, function(set) {
+    applySet(set);
+  });
+
   (callback || root.postMessage)({
-    'best_set': best_set
+    'best_set': best_set,
+    'mean': mean(timesPlayedArr(teams)),
+    'std_dev': stdDeviation(timesPlayedArr(teams))
   });
 };
-
-function pickByLookahead(sets, remaining_sets) {
-  var lookahead_best_sets = [];
-  var nLowestScore = null;
-  if (sets.length > 100)
-    sets = chooseRandomItems(sets, 90);
-  var nSets = sets.length;
-  for (var nSet = 0; nSet < nSets; ++nSet) {
-    var set = sets[nSet];
-    applySet(set);
-    
-    var best_sets = trySiteCombos(remaining_sets);
-    var nLSets = best_sets.length;
-    for (var nLSet = 0; nLSet < nLSets; ++nLSet) {
-      var lookahead_set = best_sets[nLSet];
-      applySet(lookahead_set);
-      var nScore = Math.round(scoreTeams() * 10);
-      if (nLowestScore == null || nScore <= nLowestScore) {
-        if (nScore == nLowestScore) {
-          if (!_(lookahead_best_sets).include(set))
-            lookahead_best_sets.push(set);
-        }
-        else {
-          lookahead_best_sets = [set];
-        }
-        nLowestScore = nScore;
-      }
-      applySet(lookahead_set, true);
-    }
-    applySet(set, true);
-  }
-  return lookahead_best_sets;
-}
 
 function applySet(set, unapply) {
   var num_teams = teams.length;
@@ -89,28 +58,43 @@ function chooseRandomItems(array, num_items) {
   return random_items;
 }
 
-function trySiteCombos(sets) {
-  var lowest_score = -1,
+function trySiteCombos(remaining_sets, target_depth) {
+  var lowest_score,
     best_sets = [],
     new_score;
   
-  var num_sets = sets.length;
-  for (var set_num = 0; set_num < num_sets; ++set_num) {
-    var set = sets[set_num];
-    applySet(set);
-    var new_score = scoreTeams();
-    applySet(set, true);
+  function goDeeper(remaining_sets, current_sets, depth) {
+    var len = remaining_sets.length;
+    for (var i = 0; i < len; ++i) {
+      var set = remaining_sets[i];
+      applySet(set);
 
-    if (lowest_score == -1 || new_score <= lowest_score) {
-      if (new_score == lowest_score) {
-        best_sets.push(set);
+      if (depth == target_depth) {
+        var new_score = scoreTeams();
+        if (lowest_score == null || new_score <= lowest_score) {
+          var new_current = current_sets.slice();
+          new_current.push(set);
+          if (new_score == lowest_score) {
+            best_sets.push(new_current);
+          }
+          else {
+            best_sets = [new_current];
+            lowest_score = new_score;
+          }
+        }
       }
-      else if (lowest_score == -1 || new_score < lowest_score) {
-        best_sets = [set];
-        lowest_score = new_score;
+      else {
+        var new_remaining = remaining_sets.slice();
+        new_remaining.splice(i, 1);
+        var new_current = current_sets.slice();
+        new_current.push(set);
+        goDeeper(new_remaining, new_current, depth + 1);
       }
+
+      applySet(set, true);
     }
   }
+  goDeeper(remaining_sets, [], 1);
   return best_sets;
 }
 
@@ -130,6 +114,20 @@ function getTwoTeamSiteID(teams) {
 }
 
 function scoreTeams() {
+  var score = stdDeviation(timesPlayedArr(teams));
+
+  // penalties for byes & times in a two-team-site
+  var nTeams = teams.length;
+  for (var nTeam = 0; nTeam < nTeams; ++nTeam) {
+    var team = teams[nTeam];
+    score += 20 * (team.nTwoTeamSite * team.nTwoTeamSite)
+    score += 200 * (team.nByes * team.nByes);
+  }
+
+  return score;
+}
+
+function timesPlayedArr(teams) {
   var times_played = [];
   
   // get times played as flat array
@@ -138,38 +136,40 @@ function scoreTeams() {
     var team = teams[nTeam];
     times_played = times_played.concat(team.timesPlayedTeam.slice(nTeam + 1))
   }
-
-  // calculate mean
-  var nTimes = times_played.length;
-  var sum = 0;
-  for (var nTime = 0; nTime < nTimes; ++nTime)
-    sum += times_played[nTime];
-  var mean = sum / nTimes;
-
-  // sum the square of the deviations
-  var score = 0;
-  for (var nTime = 0; nTime < nTimes; ++nTime) {
-    var deviation = mean - times_played[nTime];
-    score += deviation * deviation;
-  }
-
-  // penalties for byes & times in a two-team-site
-  for (var nTeam = 0; nTeam < nTeams; ++nTeam) {
-    var team = teams[nTeam];
-    score += 10 * (team.nTwoTeamSite * team.nTwoTeamSite)
-    score += 100 * (team.nByes * team.nByes);
-  }
-
-  return score;
+  return times_played;
 }
 
 // this is necessary if they're passed across a worker boundary
 function ensureTeamsInstantiated(teams) {
-  return teams.map(function(team) {
-    if (!(team instanceof Team))
-      team = Team.deserialize(team);
-    return team;
+  return _.map(teams, function(team) {
+    if (team instanceof Team)
+      return team.clone();
+    else
+      return Team.deserialize(team);
   });
 }
+
+function stdDeviation(arr) {
+  var _mean = mean(arr);
+
+  // sum the square of the deviations
+  var sum_sq_diffs = 0;
+  var len = arr.length;
+  for (i = 0; i < len; ++i) {
+    var diff = _mean - arr[i];
+    sum_sq_diffs += diff * diff;
+  }
+
+  return Math.sqrt(sum_sq_diffs / len);
+}
+function mean(arr) {
+  var sum = 0, len = arr.length;
+  for (var i = 0; i < len; ++i)
+    sum += arr[i];
+  return sum / len;
+}
+var test_result = stdDeviation([2, 4, 4, 4, 5, 5, 7, 9]);
+if (test_result != 2)
+  throw new Error('stdDeviation test fail: ' + test_result)
 
 })(this);

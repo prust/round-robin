@@ -25,7 +25,7 @@ $(function() {
     },
 
     'renderGenerateBtn': function renderGenerateBtn() {
-      this.append($('<a id="generate" class="btn"><i class="icon-plus"></i> Add Round</a>'));
+      this.append($('<a id="generate" class="btn"><i class="icon-plus"></i> Add 6 Rounds</a>'));
     },
 
     'renderRoundRobin': function renderRoundRobin() {
