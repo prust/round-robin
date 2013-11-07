@@ -4,7 +4,8 @@ $(function() {
     'tagName': 'div',
     'events': {
       'click #generate': 'generateRoundRobin',
-      'click #generate6': 'generateRoundRobin6',
+      'click #generate2': 'generateRoundRobin2',
+      'click #generate3': 'generateRoundRobin3'
     },
 
     'initialize': function initialize() {
@@ -26,7 +27,7 @@ $(function() {
     },
 
     'renderGenerateBtn': function renderGenerateBtn() {
-      this.append($('<a id="generate" class="btn"><i class="icon-plus"></i> Add 1 Round</a> &nbsp; <a id="generate6" class="btn"><i class="icon-plus"></i> Add 6 Rounds</a>'));
+      this.append($('<a id="generate" class="btn generate"><i class="icon-plus"></i> Add 1 Round</a> &nbsp; <a id="generate2" class="btn generate"><i class="icon-plus"></i> Add 2 Rounds</a> &nbsp; <a id="generate3" class="btn generate"><i class="icon-plus"></i> Add 3 Rounds</a>'));
     },
 
     'renderRoundRobin': function renderRoundRobin() {
@@ -64,7 +65,10 @@ $(function() {
 
     'getTeamsForSiteAndPosition': function getTeamsForSiteAndPosition(site_num, team_position) {
       return this.model.rounds.pluck('set').map(function(sites) {
-        var team_num = sites[site_num][team_position];
+        var site = sites[site_num];
+        if (!site)
+          return '';
+        var team_num = site[team_position];
         if (team_num == null)
           return '';
         var team = g_aTeams[team_num];
@@ -148,13 +152,18 @@ $(function() {
     },
 
     'generateRoundRobin': function generateRoundRobin() {
-      this.$('#generate').attr('disabled', 'disabled');
+      this.$('.btn.generate').attr('disabled', 'disabled');
       this.model.generateRound(1);
     },
 
-    'generateRoundRobin6': function generateRoundRobin6() {
-      this.$('#generate').attr('disabled', 'disabled');
-      this.model.generateRound(6);
+    'generateRoundRobin2': function generateRoundRobin2() {
+      this.$('.btn.generate').attr('disabled', 'disabled');
+      this.model.generateRound(2);
     },
+
+    'generateRoundRobin3': function generateRoundRobin3() {
+      this.$('.btn.generate').attr('disabled', 'disabled');
+      this.model.generateRound(3);
+    }
   });
 });
