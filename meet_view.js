@@ -4,6 +4,7 @@ $(function() {
     'tagName': 'div',
     'events': {
       'click #generate': 'generateRoundRobin',
+      'click #generate6': 'generateRoundRobin6',
     },
 
     'initialize': function initialize() {
@@ -25,7 +26,7 @@ $(function() {
     },
 
     'renderGenerateBtn': function renderGenerateBtn() {
-      this.append($('<a id="generate" class="btn"><i class="icon-plus"></i> Add 6 Rounds</a>'));
+      this.append($('<a id="generate" class="btn"><i class="icon-plus"></i> Add 1 Round</a> &nbsp; <a id="generate6" class="btn"><i class="icon-plus"></i> Add 6 Rounds</a>'));
     },
 
     'renderRoundRobin': function renderRoundRobin() {
@@ -148,7 +149,12 @@ $(function() {
 
     'generateRoundRobin': function generateRoundRobin() {
       this.$('#generate').attr('disabled', 'disabled');
-      this.model.generateRound();
-    }
+      this.model.generateRound(1);
+    },
+
+    'generateRoundRobin6': function generateRoundRobin6() {
+      this.$('#generate').attr('disabled', 'disabled');
+      this.model.generateRound(6);
+    },
   });
 });

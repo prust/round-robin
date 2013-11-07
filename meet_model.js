@@ -24,7 +24,7 @@ $(function() {
       this.rounds = new Rounds(null, {'meet_id': attributes.id});
       this.rounds.fetch();
     },
-    generateRound: function() {
+    generateRound: function(depth) {
       // TODO: Run the competition reports in the app_view after generating or
       // loading a meet, based on all loaded meets instead of based on globals
       
@@ -49,7 +49,7 @@ $(function() {
         'all_sets': g_all_sets,
         'teams': g_aTeams,
         'prev_sets': this.rounds.invoke('get', 'set'),
-        'depth': 6
+        'depth': depth
       };
 
       if (window.genRound) {
