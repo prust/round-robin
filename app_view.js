@@ -4,7 +4,7 @@ $(function() {
     events: {
       'click #create_meet': 'createMeet',
       'click #clear_data': 'clearData',
-      'blur #teams': 'updateTeams'
+      'click #updateTeams': 'updateTeams'
     },
     'initialize': function initialize() {
       _.bindAll(this, 'addOne', 'addLots');
@@ -23,6 +23,7 @@ $(function() {
       Meets.fetch();
     },
     'updateTeams': function updateTeams() {
+      $('#updateTeams').attr('disabled', 'disabled');
       var team_names = _(this.$('#teams').val().split(",")).map($.trim);
       localStorage.setItem('team_names', JSON.stringify(team_names));
       location.reload();
